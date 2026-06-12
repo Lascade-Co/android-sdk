@@ -4,56 +4,79 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Chatwoot Android SDK, published to Maven Central under the package/group `com.chatwoot.android`. The public API surface is a single Jetpack Compose entry point:
+A Kotlin Multiplatform (Android + iOS) chat SDK for Chatwoot, published as
+`com.chatwoot.android:sdk`. The entire public surface is `ChatPage(show, onFinish,
+styleConfig = DefaultStyle)` (Compose Multiplatform) plus `Chatwoot.configure()` and, on
+iOS, the `ChatPageViewController()` wrapper — everything else is `internal` (the module
+uses `explicitApi()`).
 
-```kotlin
-ChatPage(show, onFinish, styleConfig = DefaultStyle)
-```
+**Read `CONTEXT.md` first** for the domain glossary and the *verified* Chatwoot protocol
+contract (REST + ActionCable websocket). The upstream wiki this project started from is
+stale — `CONTEXT.md` reflects reality as probed against app.chatwoot.com; trust it over
+the wiki. `docs/adr/` records the two load-bearing decisions (Maven coordinates, KMP+CMP).
 
-The SDK wraps the Chatwoot website-widget HTTP API so Android apps get a native chat page instead of embedding the web widget.
-
-The repo is currently being scaffolded. Its Gradle/publishing structure deliberately mirrors the sibling [`dependables`](../../Other/dependables) repo — when in doubt about build, publishing, or module conventions, look there first.
-
-## Chatwoot Widget API (integration contract)
-
-From https://github.com/chatwoot/android-sdk/wiki/Steps-to-build-the-integration — the SDK talks to a Chatwoot instance as a "website inbox" client:
-
-1. **Bootstrap**: `GET <host>/widgets.json?website_token=${website_token}` — returns widget config (id, name, account id, color), an auth token, and a contact object (id, name, `pubsub_token`).
-2. **Persist the token**: store the returned conversation token locally (DataStore/DB); append it as `cw_conversation=${token}` on all subsequent calls so the contact/conversation survives app restarts.
-3. **Messages**: `GET /api/v1/widget/messages?website_token=${website_token}&cw_conversation=${token}` to fetch, `POST` to the same path to send. Send payload: `{ message: { content, timestamp, referer_url } }` (`referer_url` empty for now).
-4. **Agents**: `GET /api/v1/widget/inbox_members?website_token=${website_token}`.
-
-The wiki covers REST only. The `pubsub_token` exists for real-time updates (Rails ActionCable at `/cable`) but the wiki gives no instructions for it — verify against the Chatwoot web widget source before implementing websocket support.
-
-## Module Layout (planned, mirroring dependables)
-
-- Root `build.gradle.kts` — shared config only, no code: sets `group = "com.chatwoot.android"` for subprojects and centralises vanniktech maven-publish wiring (`publishToMavenCentral(automaticRelease = true)`, `signAllPublications()` only when `ORG_GRADLE_PROJECT_signingInMemoryKey` is set, config-cache opt-out for publish tasks per gradle/gradle#22779).
-- SDK library module — `com.android.library` + `com.vanniktech.maven.publish`; owns its own `version = "x.y.z"` and `pom { }` block (root never sets versions). Source under `src/main/kotlin/com/chatwoot/android/`.
-- `sample-app/` — minimal Android app exercising `ChatPage` end-to-end against a real Chatwoot inbox.
-- Repositories (`google()`, `mavenCentral()`) live in `settings.gradle.kts` under `dependencyResolutionManagement` with `repositoriesMode = FAIL_ON_PROJECT_REPOS` — never redeclare them in subprojects.
-- Dependency versions go in `gradle/libs.versions.toml` (version catalog), not inline.
-
-## Common Commands
+## Commands
 
 ```bash
-./gradlew build                              # build everything
-./gradlew :<module>:build                    # build one module
-./gradlew :<module>:test                     # unit tests for one module
-./gradlew :<module>:test --tests "com.chatwoot.android.<TestClass>"   # single test class
-./gradlew :<module>:publishToMavenLocal      # local publish, no signing needed
-./gradlew :sample-app:installDebug           # install the demo on a connected device
+./gradlew build                       # all targets + tests (requires macOS for iOS)
+./gradlew :sdk:testAndroidHostTest    # JVM unit tests only (fastest loop)
+./gradlew :sdk:iosSimulatorArm64Test  # common tests on the iOS simulator
+./gradlew :sdk:publishToMavenLocal    # local publish, no signing needed
+./gradlew :sample-app:installDebug    # Android demo on a connected device/emulator
+./gradlew :sdk:assembleChatwootSDKReleaseXCFramework  # XCFramework for Swift consumers
+xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build   # iOS demo (or open in Xcode)
+# NB: generic simulator destinations fail — they request ios_x64, which :sdk deliberately
+# doesn't target (arm64-only). Use a concrete simulator or ARCHS=arm64.
 ```
 
-## Publishing
+Manual e2e testing needs Chatwoot credentials in `local.properties` (not committed):
+`chatwoot.baseUrl=…` and `chatwoot.websiteToken=…` — the sample app injects them via
+BuildConfig.
 
-- Maven Central via Sonatype Central Portal (vanniktech maven-publish plugin). `automaticRelease = true` means a successful publish auto-promotes — no manual release click.
-- Credentials come from env vars: `ORG_GRADLE_PROJECT_mavenCentralUsername`, `ORG_GRADLE_PROJECT_mavenCentralPassword`, `ORG_GRADLE_PROJECT_signingInMemoryKey`, `ORG_GRADLE_PROJECT_signingInMemoryKeyPassword` (CI: GitHub secrets `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `SIGNING_KEY`, `SIGNING_KEY_PASSWORD`, `SIGNING_KEY_ID`).
-- CI publishes only when a module's `version = "..."` line changes in a push to the default branch (Maven Central rejects republishing the same GAV); `workflow_dispatch` accepts an explicit module list. See `dependables/.github/workflows/publish.yml` for the reference workflow.
-- For the Android library publication use `AndroidSingleVariantLibrary(variant = "release", sourcesJar = true, publishJavadocJar = false)` — AGP 9's bundled Dokka can't read Kotlin 2.3 metadata, and Maven Central accepts sources-only Kotlin publishes.
+## Architecture
 
-## Key Conventions
+One KMP module, `:sdk` (targets: `androidLibrary` via AGP's
+`com.android.kotlin.multiplatform.library`, `iosArm64`, `iosSimulatorArm64`). Data flows:
 
-- JVM target 21: `kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_21) } }` with matching `compileOptions`.
-- AGP 9.x, Gradle 9.4+, config cache and build cache enabled in `gradle.properties`.
-- The SDK module ships `consumer-rules.pro`; keep the public Compose API stable — `show`/`onFinish`/`styleConfig` is the whole contract, everything else stays `internal`.
-- `styleConfig` defaults to a `DefaultStyle`; all theming flows through that one config object rather than scattered parameters.
+```
+ChatPage → ChatScreen → ChatViewModel (multiplatform lifecycle ViewModel)
+  → ChatRepository (session lifecycle, message StateFlow, send; dedupes REST + ws)
+      → WidgetApi   (Ktor REST; bootstrap parses HTML via WidgetPageParser)
+      → CableClient (websocket: subscribe/keepalive/backoff; pure frame logic in CableProtocol)
+      → TokenStore  (multiplatform-settings; persists the cw_conversation JWT per website token)
+```
+
+Key invariants:
+- The bootstrap endpoint returns **HTML**, not JSON — session tokens are regex-parsed
+  (`WidgetPageParser`). There is no JSON alternative.
+- First send of a fresh session goes through `POST /conversations`, later sends through
+  `POST /messages`; after conversation creation the repository *refetches* messages rather
+  than parsing the create response (its `message_type` is a string there, an int elsewhere).
+- `CableProtocol` is pure functions (frame parse/build) so it stays unit-testable;
+  `CableClient` owns the connection loop, 30s `update_presence` keepalive, and reconnect
+  backoff — on reconnect the repository refreshes history to catch up missed events.
+- `private: true` messages are agent notes — filter, never render. `message_type`: 0
+  contact, 1 agent, 2 activity, 3 template.
+- Platform code is minimal by design: expect/actual for the config fallback
+  (manifest meta-data / Info.plist) and the Ktor engine comes from the classpath
+  (OkHttp on Android, Darwin on iOS). Keep new code in `commonMain`.
+
+## Build system conventions (mirrors the sibling `dependables` repo)
+
+- Root `build.gradle.kts` centralises group + vanniktech maven-publish
+  (`publishToMavenCentral(automaticRelease = true)`, signing only when
+  `ORG_GRADLE_PROJECT_signingInMemoryKey` is set, config-cache opt-out for publish tasks).
+  The `:sdk` module owns its own `version` and `pom {}`.
+- Repositories only in `settings.gradle.kts` (`FAIL_ON_PROJECT_REPOS`); versions only in
+  `gradle/libs.versions.toml`. JVM target 21. The Compose compiler plugin version is the
+  Kotlin version.
+- `kotlin.daemon.jvmargs`/`kotlin.native.jvmArgs` are raised in `gradle.properties` —
+  Kotlin/Native linking of Compose OOMs at the default heap; don't remove them.
+- CI (`.github/workflows/`): `build.yml` runs `./gradlew build` on macOS;
+  `publish.yml` publishes **only when `version = "…"` changes** in `sdk/build.gradle.kts`
+  on master, then builds the XCFramework, attaches it to a `sdk-vX.Y.Z` GitHub release and
+  rewrites `Package.swift` (url + checksum) for SPM consumers.
+- Publishing to Maven Central requires Chatwoot's verified Sonatype namespace
+  (`com.chatwoot`) — expected to stay red until upstreaming (ADR 0001).
