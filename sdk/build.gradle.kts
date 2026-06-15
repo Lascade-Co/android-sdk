@@ -71,6 +71,8 @@ kotlin {
             // Video + audio playback. iOS uses AVFoundation, which ships with Kotlin/Native.
             implementation(libs.media3.exoplayer)
             implementation(libs.media3.ui)
+            // Runtime mic-permission request for voice-note recording.
+            implementation(libs.androidx.activity.compose)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

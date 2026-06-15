@@ -20,6 +20,8 @@
 	<string>1</string>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record and send voice notes in the chat.</string>
 	<!-- Required by Compose Multiplatform on iOS (PlistSanityCheck aborts without it). -->
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>

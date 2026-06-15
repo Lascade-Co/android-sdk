@@ -52,6 +52,19 @@ ChatPageViewControllerKt.ChatPageViewController(
 Everything else — anonymous contact creation, conversation persistence across launches,
 history, live agent replies, typing indicators, reconnection — is handled inside.
 
+## Permissions (voice notes)
+
+Recording a voice note needs the microphone. The SDK requests it at first use and silently
+hides the mic button if it's unavailable.
+
+- **Android** — `RECORD_AUDIO` is declared in the SDK manifest and merges into your app
+  automatically; nothing to add.
+- **iOS** — you must add `NSMicrophoneUsageDescription` (with a user-facing reason) to your
+  app's `Info.plist`. iOS aborts at permission-request time if the key is missing, and the SDK
+  cannot supply it on your behalf.
+
+Picking image/video/file attachments needs no runtime permission on either platform.
+
 ## Identifying the visitor
 
 By default the contact is anonymous. If your app knows who the user is, identify them so agents

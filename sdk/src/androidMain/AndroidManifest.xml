@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Voice notes. Host apps still request it at runtime; the SDK does so at first record tap. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application>
         <provider
