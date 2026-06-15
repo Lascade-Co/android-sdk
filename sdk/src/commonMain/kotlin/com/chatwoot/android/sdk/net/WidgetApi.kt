@@ -13,6 +13,7 @@ import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -124,6 +125,28 @@ internal class WidgetApi(
             append("message[timestamp]", Clock.System.now().toString())
         },
     )
+
+    /**
+     * Associates the contact with a stable [ContactRequest.identifier] (`set_user`). When the inbox
+     * enforces identity validation the server checks [ContactRequest.identifierHash]; otherwise it's
+     * optional. Use [updateContact] for attribute-only updates with no identifier.
+     */
+    suspend fun setUser(authToken: String, body: ContactRequest) {
+        client.patch("$base/api/v1/widget/contact/set_user") {
+            authenticated(authToken)
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }
+    }
+
+    /** Updates the (possibly anonymous) contact's attributes. No identity validation. */
+    suspend fun updateContact(authToken: String, body: ContactRequest) {
+        client.patch("$base/api/v1/widget/contact") {
+            authenticated(authToken)
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }
+    }
 
     suspend fun getAgents(): List<AgentDto> =
         client.get("$base/api/v1/widget/inbox_members") {

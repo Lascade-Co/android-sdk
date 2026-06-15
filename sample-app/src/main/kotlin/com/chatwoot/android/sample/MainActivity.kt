@@ -26,6 +26,16 @@ class MainActivity : ComponentActivity() {
             websiteToken = BuildConfig.CHATWOOT_WEBSITE_TOKEN,
         )
 
+        // Identify the visitor so agents see a named contact instead of an anonymous one.
+        // Call after your app's own login; pass `identifierHash` (computed server-side) only if
+        // the inbox enforces identity validation. On logout, call Chatwoot.reset().
+        Chatwoot.setUser(
+            identifier = "sample-user-1",
+            name = "Sample User",
+            email = "sample@example.com",
+            customAttributes = mapOf("plan" to "free"),
+        )
+
         setContent {
             MaterialTheme {
                 var showChat by remember { mutableStateOf(false) }

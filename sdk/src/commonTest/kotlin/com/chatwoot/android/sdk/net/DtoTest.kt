@@ -50,4 +50,24 @@ class DtoTest {
         assertTrue("\"referer_url\"" in body, body)
         assertTrue("\"content\":\"hello\"" in body, body)
     }
+
+    @Test
+    fun encodesContactRequestWithSnakeCaseKeysAndOmitsNulls() {
+        val body = ChatwootJson.encodeToString(
+            ContactRequest.serializer(),
+            ContactRequest(
+                identifier = "u-123",
+                identifierHash = "deadbeef",
+                name = "Ada",
+                email = "ada@example.com",
+                customAttributes = mapOf("plan" to "pro"),
+            ),
+        )
+        assertTrue("\"identifier\":\"u-123\"" in body, body)
+        assertTrue("\"identifier_hash\":\"deadbeef\"" in body, body)
+        assertTrue("\"custom_attributes\":{\"plan\":\"pro\"}" in body, body)
+        // phone_number / avatar_url were null — dropped during encoding.
+        assertFalse("phone_number" in body, body)
+        assertFalse("avatar_url" in body, body)
+    }
 }

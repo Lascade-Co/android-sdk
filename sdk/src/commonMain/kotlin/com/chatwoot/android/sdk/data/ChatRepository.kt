@@ -1,9 +1,12 @@
 package com.chatwoot.android.sdk.data
 
+import com.chatwoot.android.sdk.Chatwoot
 import com.chatwoot.android.sdk.ChatwootConfig
+import com.chatwoot.android.sdk.ChatwootIdentity
 import com.chatwoot.android.sdk.net.AttachmentDto
 import com.chatwoot.android.sdk.net.CableClient
 import com.chatwoot.android.sdk.net.CableEvent
+import com.chatwoot.android.sdk.net.ContactRequest
 import com.chatwoot.android.sdk.net.MessageDto
 import com.chatwoot.android.sdk.net.WidgetApi
 import com.chatwoot.android.sdk.net.WidgetSession
@@ -12,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
@@ -75,9 +79,21 @@ internal class ChatRepository(
     private var nextTempId = -1L
 
     suspend fun connect(scope: CoroutineScope) {
+        // A different identified user than the persisted session means we must not resume the
+        // previous contact's conversation — drop the stored token so bootstrap creates a fresh one.
+        val wanted = Chatwoot.identity.value
+        if (wanted.identifier != null &&
+            wanted.identifier != tokenStore.activeIdentifier(config.websiteToken)
+        ) {
+            tokenStore.clearSession(config.websiteToken)
+        }
+
         val s = api.fetchSession(tokenStore.conversationToken(config.websiteToken))
         tokenStore.saveConversationToken(config.websiteToken, s.authToken)
+        tokenStore.saveActiveIdentifier(config.websiteToken, wanted.identifier)
         session = s
+
+        runCatching { flushIdentity(s.authToken, wanted) }
 
         refreshMessages(s)
         _state.update { it.copy(loading = false) }
@@ -87,6 +103,25 @@ internal class ChatRepository(
                 onCableEvent(event, s)
             }
         }
+        // Push later attribute changes (the value we just flushed is dropped).
+        scope.launch {
+            Chatwoot.identity.drop(1).collect { runCatching { flushIdentity(s.authToken, it) } }
+        }
+    }
+
+    /** Sends the current identity to Chatwoot: `set_user` when identified, plain update otherwise. */
+    private suspend fun flushIdentity(authToken: String, id: ChatwootIdentity) {
+        if (id.isEmpty) return
+        val body = ContactRequest(
+            identifier = id.identifier,
+            identifierHash = id.identifierHash,
+            name = id.name,
+            email = id.email,
+            phoneNumber = id.phoneNumber,
+            avatarUrl = id.avatarUrl,
+            customAttributes = id.customAttributes.ifEmpty { null },
+        )
+        if (id.identifier != null) api.setUser(authToken, body) else api.updateContact(authToken, body)
     }
 
     suspend fun send(content: String) {

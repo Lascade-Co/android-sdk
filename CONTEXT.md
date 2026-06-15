@@ -26,7 +26,16 @@ them in code, docs, and discussion.
 - **StyleConfig / DefaultStyle** — the one theming object; all visual customisation flows
   through it. No other styling knobs exist.
 - **Contact** — the end user chatting. Chatwoot auto-creates an anonymous contact (e.g.
-  "weathered-shape-813") on first bootstrap.
+  "weathered-shape-813") on first bootstrap. The host names it via `Chatwoot.setUser(...)`.
+- **Identifier** — a stable, host-defined id for the contact (e.g. the host app's user id).
+  Supplied via `setUser`; lets Chatwoot recognise the same person across reinstalls/devices.
+  Persisted next to the conversation token by `TokenStore`; changing it starts a fresh contact.
+- **Identity validation / HMAC** — optional impersonation protection. When an inbox enables it,
+  associating an **identifier** requires an `identifier_hash` = `HMAC-SHA256(inbox_hmac_token,
+  identifier)`. The `hmac_token` is a per-inbox **secret** computed **server-side** by the host's
+  backend; the SDK only ever forwards a precomputed hash and never holds the secret.
+- **Custom attributes** — inbox-defined key/value fields on the contact (`custom_attributes`).
+  The SDK takes a `Map<String,String>`; numbers/dates are passed as strings.
 - **Attachment** — a file carried by a Message. Each has a `file_type` (`image`, `audio`,
   `video`, `file`, plus rarer kinds — anything other than the first three renders as a generic
   file), a `data_url` (original) and optional `thumb_url` (preview). Sent one-per-message and
@@ -58,6 +67,8 @@ Omitting `cw_conversation` creates a fresh contact; passing it resumes the sessi
 | `POST /messages` (multipart) | **Attachment** upload (`multipart/form-data`): `message[attachments][]` (the file, with filename) + `message[referer_url]` + `message[timestamp]`. No `content`, no `echo_id` — one file, caption-less. Returns the created Message (parse for the real `id` + attachment URLs). |
 | `POST /conversations` | First message of a session: `{"message":{…}}` (optional `contact:{name,email,phone_number}`). Creates conversation + message. Caveat: in *this* response `message_type` is a string (`"template"`); the SDK refetches `GET /messages` instead of parsing it. |
 | `GET /conversations` | `{}` when no conversation exists yet. |
+| `PATCH /contact` | Updates the (possibly anonymous) contact. **Flat** body (not nested under `contact`): `{name,email,phone_number,avatar_url,custom_attributes:{},additional_attributes:{}}`. No identity validation. Also the `setCustomAttributes` path (`{custom_attributes:{}}`). |
+| `PATCH /contact/set_user` | Associates a stable `identifier`: body `{identifier, …same fields…, identifier_hash}`. Server runs `validate_hmac` (`HMAC-SHA256(hmac_token, identifier)`) — enforced only when the inbox has identity validation on; otherwise `identifier_hash` is optional. |
 | `GET /inbox_members` | `{"payload":[{id,name,avatar_url,availability_status}]}` — no auth header needed. |
 
 A Message carries an `attachments` array; each entry: `{id, file_type, data_url, thumb_url,

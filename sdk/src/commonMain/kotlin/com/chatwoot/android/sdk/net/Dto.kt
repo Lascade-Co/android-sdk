@@ -87,3 +87,18 @@ internal data class SendMessageRequest(
 internal data class CreateConversationRequest(
     val message: OutgoingMessageDto,
 )
+
+/**
+ * Flat contact body for `PATCH /api/v1/widget/contact[/set_user]`. Null fields are dropped during
+ * encoding (`explicitNulls = false`), so each call sends only what the host supplied.
+ */
+@Serializable
+internal data class ContactRequest(
+    val identifier: String? = null,
+    @SerialName("identifier_hash") val identifierHash: String? = null,
+    val name: String? = null,
+    val email: String? = null,
+    @SerialName("phone_number") val phoneNumber: String? = null,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("custom_attributes") val customAttributes: Map<String, String>? = null,
+)

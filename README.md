@@ -52,6 +52,31 @@ ChatPageViewControllerKt.ChatPageViewController(
 Everything else — anonymous contact creation, conversation persistence across launches,
 history, live agent replies, typing indicators, reconnection — is handled inside.
 
+## Identifying the visitor
+
+By default the contact is anonymous. If your app knows who the user is, identify them so agents
+see a named contact and conversations follow the user across reinstalls/devices. Call it any
+time (typically after your own login), before or while `ChatPage` is shown:
+
+```kotlin
+Chatwoot.setUser(
+    identifier = "your-user-id",          // stable id; recognises the same person later
+    name = "Ada Lovelace",
+    email = "ada@example.com",
+    phoneNumber = "+15551234567",
+    customAttributes = mapOf("plan" to "pro"),
+    identifierHash = serverComputedHash,  // only if the inbox enforces identity validation
+)
+
+Chatwoot.setCustomAttributes(mapOf("plan" to "enterprise"))  // merge more attributes later
+Chatwoot.reset()                                             // on logout — forgets the session
+```
+
+**Identity validation (optional):** if you enable it on the inbox, `identifierHash` is required.
+It must be computed **on your backend** as `HMAC-SHA256(hmacToken, identifier)` — the HMAC token
+is a secret and must never ship inside the app. Passing a different `identifier` than the active
+session starts a fresh contact + conversation on the next `ChatPage` open.
+
 ## Theming
 
 All visual customisation flows through one object:
