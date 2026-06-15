@@ -53,6 +53,11 @@ kotlin {
             implementation(libs.multiplatform.settings.no.arg)
             implementation(libs.jb.lifecycle.viewmodel.compose)
             implementation(libs.jb.lifecycle.runtime.compose)
+
+            // Attachments: image loading (over the existing Ktor stack) + the file/media picker.
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor3)
+            implementation(libs.filekit.dialogs.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -61,6 +66,9 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.startup)
+            // Video + audio playback. iOS uses AVFoundation, which ships with Kotlin/Native.
+            implementation(libs.media3.exoplayer)
+            implementation(libs.media3.ui)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

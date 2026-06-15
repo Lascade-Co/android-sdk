@@ -1,12 +1,15 @@
 [versions]
 kotlin = "2.4.0"
-agp = "9.2.0"
+agp = "9.2.1"
 vanniktechPublish = "0.33.0"
 composeMultiplatform = "1.11.1"
 ktor = "3.5.0"
 coroutines = "1.11.0"
 serializationJson = "1.11.0"
 multiplatformSettings = "1.3.0"
+coil = "3.5.0"
+filekit = "0.14.2"
+media3 = "1.10.1"
 jbLifecycle = "2.10.0"
 androidxComposeBom = "2026.05.00"
 activityCompose = "1.13.0"
@@ -35,6 +38,12 @@ coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-
 
 multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatformSettings" }
 multiplatform-settings-no-arg = { group = "com.russhwolf", name = "multiplatform-settings-no-arg", version.ref = "multiplatformSettings" }
+
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
+filekit-dialogs-compose = { group = "io.github.vinceglb", name = "filekit-dialogs-compose", version.ref = "filekit" }
+media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 
 jb-lifecycle-viewmodel-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "jbLifecycle" }
 jb-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "jbLifecycle" }

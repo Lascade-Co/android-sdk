@@ -23,6 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.ImageLoader
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.network.ktor3.KtorNetworkFetcherFactory
 import com.chatwoot.android.sdk.ChatViewModel
 import com.chatwoot.android.sdk.style.StyleConfig
 
@@ -32,6 +35,13 @@ internal fun ChatScreen(
     style: StyleConfig,
     viewModel: ChatViewModel = viewModel { ChatViewModel() },
 ) {
+    // Coil loads attachment images over the same Ktor stack the SDK already uses (KMP-wide).
+    setSingletonImageLoaderFactory { context ->
+        ImageLoader.Builder(context)
+            .components { add(KtorNetworkFetcherFactory()) }
+            .build()
+    }
+
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
@@ -82,6 +92,11 @@ internal fun ChatScreen(
             }
         }
 
-        InputBar(style = style, enabled = !state.loading, onSend = viewModel::send)
+        InputBar(
+            style = style,
+            enabled = !state.loading,
+            onSend = viewModel::send,
+            onPickAttachment = viewModel::sendAttachment,
+        )
     }
 }

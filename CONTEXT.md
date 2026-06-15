@@ -27,6 +27,10 @@ them in code, docs, and discussion.
   through it. No other styling knobs exist.
 - **Contact** — the end user chatting. Chatwoot auto-creates an anonymous contact (e.g.
   "weathered-shape-813") on first bootstrap.
+- **Attachment** — a file carried by a Message. Each has a `file_type` (`image`, `audio`,
+  `video`, `file`, plus rarer kinds — anything other than the first three renders as a generic
+  file), a `data_url` (original) and optional `thumb_url` (preview). Sent one-per-message and
+  caption-less (the upload carries no `content`). _Avoid_: media, upload.
 
 ## Protocol contract (verified against app.chatwoot.com, June 2026)
 
@@ -51,9 +55,21 @@ Omitting `cw_conversation` creates a fresh contact; passing it resumes the sessi
 |---|---|
 | `GET /messages` | `{"payload":[Message…]}`. `message_type`: 0 contact, 1 agent, 2 activity, 3 template. `created_at` is unix seconds. `private: true` messages are agent notes — never render. |
 | `POST /messages` | Body `{"message":{"content","timestamp","referer_url"}}` — only for an **existing** conversation. Returns the created Message. |
+| `POST /messages` (multipart) | **Attachment** upload (`multipart/form-data`): `message[attachments][]` (the file, with filename) + `message[referer_url]` + `message[timestamp]`. No `content`, no `echo_id` — one file, caption-less. Returns the created Message (parse for the real `id` + attachment URLs). |
 | `POST /conversations` | First message of a session: `{"message":{…}}` (optional `contact:{name,email,phone_number}`). Creates conversation + message. Caveat: in *this* response `message_type` is a string (`"template"`); the SDK refetches `GET /messages` instead of parsing it. |
 | `GET /conversations` | `{}` when no conversation exists yet. |
 | `GET /inbox_members` | `{"payload":[{id,name,avatar_url,availability_status}]}` — no auth header needed. |
+
+A Message carries an `attachments` array; each entry: `{id, file_type, data_url, thumb_url,
+file_size, width, height, extension}`. Received attachments need no special handling — they
+arrive on `GET /messages` and on the `message.created`/`message.updated` websocket events like
+any other field.
+
+> **Unverified edge:** sending the session's *first* message as an attachment uses multipart
+> `POST /conversations` (same `message[attachments][]` fields). The JSON create path is verified;
+> the multipart create is not yet probed against app.chatwoot.com — verify during e2e. The
+> create response's `message_type` is a string (as with the text path), so the SDK refetches
+> `GET /messages` instead of parsing it.
 
 ### Realtime (`wss://<base>/cable`, ActionCable wire protocol)
 

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chatwoot.android.sdk.data.ChatRepository
 import com.chatwoot.android.sdk.data.ChatUiState
+import com.chatwoot.android.sdk.data.PickedFile
 import com.chatwoot.android.sdk.net.defaultHttpClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +43,15 @@ internal class ChatViewModel : ViewModel() {
             runCatching { repository.send(text) }
                 .onFailure { e ->
                     _state.value = _state.value.copy(error = e.message ?: "Message failed to send")
+                }
+        }
+    }
+
+    fun sendAttachment(file: PickedFile) {
+        viewModelScope.launch {
+            runCatching { repository.sendAttachment(file) }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(error = e.message ?: "Attachment failed to send")
                 }
         }
     }

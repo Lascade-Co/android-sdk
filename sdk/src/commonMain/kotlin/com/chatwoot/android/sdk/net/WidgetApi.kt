@@ -1,11 +1,15 @@
 package com.chatwoot.android.sdk.net
 
 import com.chatwoot.android.sdk.ChatwootConfig
+import com.chatwoot.android.sdk.data.PickedFile
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.onUpload
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -13,6 +17,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
@@ -62,6 +67,22 @@ internal class WidgetApi(
             setBody(SendMessageRequest(outgoing(content)))
         }.body()
 
+    /**
+     * Uploads an attachment as a (caption-less) message into an existing conversation. Mirrors
+     * the widget's `sendAttachment` multipart shape (`message[attachments][]`, `referer_url`,
+     * `timestamp`); returns the created Message so the caller can reconcile its optimistic bubble.
+     */
+    suspend fun sendAttachment(
+        authToken: String,
+        file: PickedFile,
+        onProgress: (Float) -> Unit = {},
+    ): MessageDto =
+        client.post("$base/api/v1/widget/messages") {
+            authenticated(authToken)
+            setBody(attachmentForm(file))
+            onUpload { sent, total -> if (total != null && total > 0) onProgress(sent.toFloat() / total) }
+        }.body()
+
     /** First message of a session goes through conversation creation. */
     suspend fun createConversation(authToken: String, content: String) {
         client.post("$base/api/v1/widget/conversations") {
@@ -70,6 +91,39 @@ internal class WidgetApi(
             setBody(CreateConversationRequest(outgoing(content)))
         }
     }
+
+    /**
+     * Creates the session's first conversation carrying an attachment (multipart). The create
+     * response's `message_type` is a string (see CONTEXT.md), so — like [createConversation] —
+     * we don't parse it; the caller refetches `GET /messages` to pick up the stored attachment.
+     */
+    suspend fun createConversationWithAttachment(
+        authToken: String,
+        file: PickedFile,
+        onProgress: (Float) -> Unit = {},
+    ) {
+        client.post("$base/api/v1/widget/conversations") {
+            authenticated(authToken)
+            setBody(attachmentForm(file))
+            onUpload { sent, total -> if (total != null && total > 0) onProgress(sent.toFloat() / total) }
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    private fun attachmentForm(file: PickedFile) = MultiPartFormDataContent(
+        formData {
+            append(
+                "message[attachments][]",
+                file.bytes,
+                Headers.build {
+                    append(HttpHeaders.ContentType, file.mimeType)
+                    append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                },
+            )
+            append("message[referer_url]", "")
+            append("message[timestamp]", Clock.System.now().toString())
+        },
+    )
 
     suspend fun getAgents(): List<AgentDto> =
         client.get("$base/api/v1/widget/inbox_members") {

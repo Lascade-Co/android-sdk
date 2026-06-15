@@ -24,6 +24,20 @@ internal data class MessageDto(
     val status: String? = null,
     val private: Boolean = false,
     val sender: SenderDto? = null,
+    val attachments: List<AttachmentDto> = emptyList(),
+)
+
+@Serializable
+internal data class AttachmentDto(
+    val id: Long? = null,
+    // image | audio | video | file | … — anything other than the first three renders as a file.
+    @SerialName("file_type") val fileType: String? = null,
+    @SerialName("data_url") val dataUrl: String? = null,
+    @SerialName("thumb_url") val thumbUrl: String? = null,
+    @SerialName("file_size") val fileSize: Long? = null,
+    val width: Int? = null,
+    val height: Int? = null,
+    val extension: String? = null,
 )
 
 @Serializable
