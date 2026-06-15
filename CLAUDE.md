@@ -5,15 +5,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 A Kotlin Multiplatform (Android + iOS) chat SDK for Chatwoot, published as
-`com.chatwoot.android:sdk`. The entire public surface is `ChatPage(show, onFinish,
-styleConfig = DefaultStyle)` (Compose Multiplatform) plus `Chatwoot.configure()` and, on
-iOS, the `ChatPageViewController()` wrapper — everything else is `internal` (the module
-uses `explicitApi()`).
+`com.chatwoot.android:sdk`. The public surface is `ChatPage(show, onFinish,
+styleConfig = DefaultStyle)` (Compose Multiplatform), the `Chatwoot` singleton
+(`configure()`, plus the visitor-identity calls `setUser()` / `setCustomAttributes()` /
+`reset()`), and, on iOS, the `ChatPageViewController()` wrapper — everything else is
+`internal` (the module uses `explicitApi()`).
 
 **Read `CONTEXT.md` first** for the domain glossary and the *verified* Chatwoot protocol
 contract (REST + ActionCable websocket). The upstream wiki this project started from is
 stale — `CONTEXT.md` reflects reality as probed against app.chatwoot.com; trust it over
-the wiki. `docs/adr/` records the two load-bearing decisions (Maven coordinates, KMP+CMP).
+the wiki. `docs/adr/` records the load-bearing decisions (Maven coordinates, KMP+CMP,
+media stack, visitor identity).
 
 ## Commands
 
@@ -45,7 +47,8 @@ ChatPage → ChatScreen → ChatViewModel (multiplatform lifecycle ViewModel)
   → ChatRepository (session lifecycle, message StateFlow, send; dedupes REST + ws)
       → WidgetApi   (Ktor REST; bootstrap parses HTML via WidgetPageParser)
       → CableClient (websocket: subscribe/keepalive/backoff; pure frame logic in CableProtocol)
-      → TokenStore  (multiplatform-settings; persists the cw_conversation JWT per website token)
+      → TokenStore  (multiplatform-settings; persists the cw_conversation JWT + active
+                     identifier per website token)
 ```
 
 Key invariants:
@@ -59,6 +62,11 @@ Key invariants:
   backoff — on reconnect the repository refreshes history to catch up missed events.
 - `private: true` messages are agent notes — filter, never render. `message_type`: 0
   contact, 1 agent, 2 activity, 3 template.
+- Visitor identity lives in `Chatwoot.identity` (a `StateFlow`); the repository flushes it
+  after bootstrap (and on later changes) via `PATCH /widget/contact/set_user` when an
+  identifier is set, else `PATCH /widget/contact`. HMAC `identifier_hash` is **host-supplied**
+  (computed server-side) — never compute it in the SDK. A changed identifier clears the stored
+  session so the next bootstrap starts a fresh contact. See ADR 0004.
 - Platform code is minimal by design: expect/actual for the config fallback
   (manifest meta-data / Info.plist) and the Ktor engine comes from the classpath
   (OkHttp on Android, Darwin on iOS). Keep new code in `commonMain`.
