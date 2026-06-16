@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,7 +48,8 @@ internal fun ChatScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
-    LaunchedEffect(state.messages.size) {
+    // Scroll to the newest message whenever one is appended or replaced (sent OR received).
+    LaunchedEffect(state.messages.size, state.messages.lastOrNull()?.id) {
         if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.size - 1)
     }
 
@@ -53,8 +57,10 @@ internal fun ChatScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(style.backgroundColor)
-            .safeDrawingPadding()
-            .imePadding(),
+            // Header paints its own status-bar inset (edge-to-edge); here we only inset the
+            // sides + bottom. safeDrawing's bottom already maxes the nav bar and IME, so the
+            // input bar rises with the keyboard without double-counting.
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)),
     ) {
         ChatHeader(style = style, connected = state.connected, onFinish = onFinish)
 

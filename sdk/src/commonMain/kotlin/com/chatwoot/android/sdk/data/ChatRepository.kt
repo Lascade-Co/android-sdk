@@ -232,7 +232,8 @@ internal fun optimistic(tempId: Long, file: PickedFile): ChatMessage = ChatMessa
 
 internal fun MessageDto.toChatMessage(): ChatMessage? {
     if (private) return null
-    val text = content?.takeIf { it.isNotBlank() }
+    // Trim surrounding whitespace and trailing blank lines for display (sent and received alike).
+    val text = content?.trim()?.takeIf { it.isNotEmpty() }
     val isActivity = messageType == 2
     val mapped = attachments.mapNotNull { it.toChatAttachment() }
     // Drop empty noise, but never an attachment- or activity-carrying message.

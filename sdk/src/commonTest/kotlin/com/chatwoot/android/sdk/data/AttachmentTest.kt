@@ -34,6 +34,30 @@ class AttachmentTest {
     }
 
     @Test
+    fun parsesIntegerFileTypeFromWidgetApi() {
+        // The widget API serialises file_type as the Rails enum int (image=0, video=2).
+        val payload = ChatwootJson.decodeFromString(
+            MessagesPayloadDto.serializer(),
+            """
+            {"payload":[
+              {"id": 1, "message_type": 0, "created_at": 1, "attachments": [
+                {"file_type": 0, "data_url": "https://cdn/x.jpg"}]},
+              {"id": 2, "message_type": 0, "created_at": 2, "attachments": [
+                {"file_type": 2, "data_url": "https://cdn/v.mp4"}]}
+            ]}
+            """.trimIndent(),
+        )
+        assertEquals(AttachmentType.Image, payload.payload[0].toChatMessage()!!.attachments.single().type)
+        assertEquals(AttachmentType.Video, payload.payload[1].toChatMessage()!!.attachments.single().type)
+    }
+
+    @Test
+    fun trimsSurroundingWhitespaceAndTrailingBlankLines() {
+        val message = MessageDto(id = 5, content = "  hi there\n\n  \n", messageType = 1, createdAt = 1).toChatMessage()
+        assertEquals("hi there", assertNotNull(message).content)
+    }
+
+    @Test
     fun attachmentOnlyMessageWithBlankContentIsNotDropped() {
         val dto = MessageDto(
             id = 1, content = "", messageType = 0, createdAt = 1,

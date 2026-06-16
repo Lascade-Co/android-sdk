@@ -36,6 +36,7 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.extension
+import io.github.vinceglb.filekit.mimeType
 import io.github.vinceglb.filekit.name
 import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.delay
@@ -77,7 +78,11 @@ internal fun InputBar(
         file ?: return
         scope.launch {
             val bytes = file.readBytes()
-            onPickAttachment(PickedFile(file.name, mimeTypeForExtension(file.extension), bytes))
+            // Use the platform's real MIME (content resolver / UTType) so Chatwoot classifies the
+            // attachment correctly; gallery content:// URIs often have no usable extension.
+            val mime = file.mimeType()?.let { "${it.primaryType}/${it.subtype}" }
+                ?: mimeTypeForExtension(file.extension)
+            onPickAttachment(PickedFile(file.name, mime, bytes))
         }
     }
 
@@ -130,6 +135,7 @@ internal fun InputBar(
             value = text,
             onValueChange = { text = it },
             enabled = enabled,
+            maxLines = 5,
             textStyle = TextStyle(color = style.textColor, fontSize = 15.sp),
             decorationBox = { innerTextField ->
                 if (text.isEmpty()) {
