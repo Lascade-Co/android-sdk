@@ -128,6 +128,16 @@ internal data class CreateConversationRequest(
 )
 
 /**
+ * `PATCH /contact/set_user` response. Mostly a contact summary the SDK ignores; the load-bearing
+ * field is [widgetAuthToken], which the server mints **only** when identifying changes the
+ * underlying contact (a merge/swap). When present it supersedes the session's `X-Auth-Token`.
+ */
+@Serializable
+internal data class SetUserResponse(
+    @SerialName("widget_auth_token") val widgetAuthToken: String? = null,
+)
+
+/**
  * Flat contact body for `PATCH /api/v1/widget/contact[/set_user]`. Null fields are dropped during
  * encoding (`explicitNulls = false`), so each call sends only what the host supplied.
  */

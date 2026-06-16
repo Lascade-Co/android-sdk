@@ -93,25 +93,32 @@ internal class ChatRepository(
         tokenStore.saveActiveIdentifier(config.websiteToken, wanted.identifier)
         session = s
 
-        runCatching { flushIdentity(s.authToken, wanted) }
+        // May adopt a server-minted token (set_user merge/swap), updating `session` in place — so
+        // it runs before the refetch/collectors below, which all read the current `session`.
+        runCatching { flushIdentity(wanted) }
 
-        refreshMessages(s)
+        refreshMessages()
         _state.update { it.copy(loading = false) }
 
         scope.launch {
             CableClient(client, config.normalizedBaseUrl, s.pubsubToken).events().collect { event ->
-                onCableEvent(event, s)
+                onCableEvent(event)
             }
         }
         // Push later attribute changes (the value we just flushed is dropped).
         scope.launch {
-            Chatwoot.identity.drop(1).collect { runCatching { flushIdentity(s.authToken, it) } }
+            Chatwoot.identity.drop(1).collect { runCatching { flushIdentity(it) } }
         }
     }
 
-    /** Sends the current identity to Chatwoot: `set_user` when identified, plain update otherwise. */
-    private suspend fun flushIdentity(authToken: String, id: ChatwootIdentity) {
+    /**
+     * Sends the current identity to Chatwoot: `set_user` when identified, plain update otherwise.
+     * Reads the active token from [session] (never a captured copy) so a previously-adopted
+     * swapped token is honoured.
+     */
+    private suspend fun flushIdentity(id: ChatwootIdentity) {
         if (id.isEmpty) return
+        val authToken = session?.authToken ?: return
         val body = ContactRequest(
             identifier = id.identifier,
             identifierHash = id.identifierHash,
@@ -121,7 +128,19 @@ internal class ChatRepository(
             avatarUrl = id.avatarUrl,
             customAttributes = id.customAttributes.ifEmpty { null },
         )
-        if (id.identifier != null) api.setUser(authToken, body) else api.updateContact(authToken, body)
+        if (id.identifier != null) {
+            // set_user mints a fresh session JWT when identifying changes the underlying contact —
+            // adopt it so later REST calls follow the contact the server resolved (ADR 0004).
+            api.setUser(authToken, body).widgetAuthToken?.let(::adoptAuthToken)
+        } else {
+            api.updateContact(authToken, body)
+        }
+    }
+
+    /** Replaces the active+persisted `X-Auth-Token` with a server-minted one. */
+    private fun adoptAuthToken(token: String) {
+        session = session?.copy(authToken = token)
+        tokenStore.saveConversationToken(config.websiteToken, token)
     }
 
     suspend fun send(content: String) {
@@ -131,7 +150,7 @@ internal class ChatRepository(
         } else {
             api.createConversation(s.authToken, content)
             hasConversation = true
-            refreshMessages(s)
+            refreshMessages()
         }
     }
 
@@ -140,7 +159,6 @@ internal class ChatRepository(
      * immediately, then reconciles it with the server's response (the websocket echo of the
      * same id is deduped by [upsert]). On failure the placeholder is marked [ChatMessage.failed].
      */
-    @OptIn(ExperimentalTime::class)
     suspend fun sendAttachment(file: PickedFile) {
         val s = session ?: error("ChatRepository.sendAttachment called before connect")
         val tempId = nextTempId--
@@ -149,25 +167,19 @@ internal class ChatRepository(
         }
         _state.update { it.copy(messages = it.messages.withUpserted(optimistic(tempId, file))) }
         try {
-            if (hasConversation) {
-                // POST /messages returns the created Message — reconcile directly.
-                val real = api.sendAttachment(s.authToken, file, onProgress).toChatMessage()
-                _state.update { it.copy(messages = it.messages.reconcilingTemp(tempId, real)) }
-            } else {
-                // The create response can't be parsed (string message_type) — drop the
-                // placeholder and refetch so the stored attachment loads from GET /messages.
-                api.createConversationWithAttachment(s.authToken, file, onProgress)
-                hasConversation = true
-                _state.update { it.copy(messages = it.messages.reconcilingTemp(tempId, null)) }
-                refreshMessages(s)
-            }
+            // POST /messages lazily creates the conversation when none exists yet and returns a
+            // parseable Message — reconcile the optimistic bubble directly. Attachments never go
+            // through POST /conversations, so this single path covers attachment-first too.
+            val real = api.sendAttachment(s.authToken, file, onProgress).toChatMessage()
+            hasConversation = true
+            _state.update { it.copy(messages = it.messages.reconcilingTemp(tempId, real)) }
         } catch (e: Throwable) {
             _state.update { it.copy(messages = it.messages.withFailed(tempId)) }
             throw e
         }
     }
 
-    private suspend fun onCableEvent(event: CableEvent, s: WidgetSession) {
+    private suspend fun onCableEvent(event: CableEvent) {
         when (event) {
             is CableEvent.MessageCreated -> upsert(event.message)
             is CableEvent.MessageUpdated -> upsert(event.message)
@@ -175,15 +187,16 @@ internal class ChatRepository(
             CableEvent.Connected -> {
                 _state.update { it.copy(connected = true) }
                 // Catch up on anything broadcast while we were offline.
-                runCatching { refreshMessages(s) }
+                runCatching { refreshMessages() }
             }
             CableEvent.Disconnected ->
                 _state.update { it.copy(connected = false, agentTyping = false) }
         }
     }
 
-    private suspend fun refreshMessages(s: WidgetSession) {
-        val history = api.getMessages(s.authToken).mapNotNull { it.toChatMessage() }
+    private suspend fun refreshMessages() {
+        val authToken = session?.authToken ?: return
+        val history = api.getMessages(authToken).mapNotNull { it.toChatMessage() }
         hasConversation = hasConversation || history.isNotEmpty()
         _state.update { state ->
             state.copy(messages = (history + state.messages.filter { m -> history.none { it.id == m.id } }).sorted())

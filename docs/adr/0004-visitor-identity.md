@@ -38,3 +38,10 @@ validated by HMAC. Chatwoot's website widget exposes this through `setUser`, bac
   A mid-session identifier change therefore can't re-key the current conversation — documented, not
   worked around.
 - Two new contact endpoints are now part of the SDK's verified contract (recorded in CONTEXT.md).
+- `set_user` may return a fresh `widget_auth_token` when identifying merges/swaps the underlying
+  contact. The repository adopts it as the new active+persisted `X-Auth-Token` so subsequent REST
+  calls follow the contact the server resolved — `session` is the single source of truth for the
+  token, read at call time rather than captured. The realtime channel can't follow (no new
+  `pubsub_token` is returned), so it stays on the original contact's `RoomChannel` until the next
+  `ChatPage` open. This is the REST-side counterpart to the "can't re-key the current conversation"
+  consequence above.

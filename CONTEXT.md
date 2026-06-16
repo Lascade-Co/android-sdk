@@ -63,12 +63,12 @@ Omitting `cw_conversation` creates a fresh contact; passing it resumes the sessi
 | Call | Notes |
 |---|---|
 | `GET /messages` | `{"payload":[Message…]}`. `message_type`: 0 contact, 1 agent, 2 activity, 3 template. `created_at` is unix seconds. `private: true` messages are agent notes — never render. |
-| `POST /messages` | Body `{"message":{"content","timestamp","referer_url"}}` — only for an **existing** conversation. Returns the created Message. |
-| `POST /messages` (multipart) | **Attachment** upload (`multipart/form-data`): `message[attachments][]` (the file, with filename) + `message[referer_url]` + `message[timestamp]`. No `content`, no `echo_id` — one file, caption-less. Returns the created Message (parse for the real `id` + attachment URLs). |
+| `POST /messages` | Body `{"message":{"content","timestamp","referer_url"}}`. **Lazily creates the conversation** if none exists yet (verified: posting to a fresh session returns the created Message with `conversation_id` set and `message_type` as an **int**). The SDK still routes the *first text* send through `POST /conversations` (below); attachments always use this endpoint. Returns the created Message. |
+| `POST /messages` (multipart) | **Attachment** upload (`multipart/form-data`): `message[attachments][]` (the file, with filename) + `message[referer_url]` + `message[timestamp]`. No `content`, no `echo_id` — one file, caption-less. Like the JSON form it **lazily creates the conversation** when none exists, so attachment-*first* sends use this — never `POST /conversations`. Returns the created Message with a parseable int `message_type` and a populated `attachments[]` (parse for the real `id` + attachment URLs; no refetch needed). |
 | `POST /conversations` | First message of a session: `{"message":{…}}` (optional `contact:{name,email,phone_number}`). Creates conversation + message. Caveat: in *this* response `message_type` is a string (`"template"`); the SDK refetches `GET /messages` instead of parsing it. |
 | `GET /conversations` | `{}` when no conversation exists yet. |
 | `PATCH /contact` | Updates the (possibly anonymous) contact. **Flat** body (not nested under `contact`): `{name,email,phone_number,avatar_url,custom_attributes:{},additional_attributes:{}}`. No identity validation. Also the `setCustomAttributes` path (`{custom_attributes:{}}`). |
-| `PATCH /contact/set_user` | Associates a stable `identifier`: body `{identifier, …same fields…, identifier_hash}`. Server runs `validate_hmac` (`HMAC-SHA256(hmac_token, identifier)`) — enforced only when the inbox has identity validation on; otherwise `identifier_hash` is optional. |
+| `PATCH /contact/set_user` | Associates a stable `identifier`: body `{identifier, …same fields…, identifier_hash}`. Server runs `validate_hmac` (`HMAC-SHA256(hmac_token, identifier)`) — enforced only when the inbox has identity validation on; otherwise `identifier_hash` is optional. Response is `{id, has_email, has_name, has_phone_number}`, and **conditionally** a `widget_auth_token` — the server mints a fresh session JWT when identifying changes the underlying contact (a merge/swap). When present, the SDK must adopt it as the new active+persisted `X-Auth-Token` (it replaces the `cw_conversation` JWT). Not returned on inboxes without identity validation (unverified against such an inbox; implemented defensively as optional). No new `pubsub_token` is returned, so the realtime channel stays on the original contact's `RoomChannel`. |
 | `GET /inbox_members` | `{"payload":[{id,name,avatar_url,availability_status}]}` — no auth header needed. |
 
 A Message carries an `attachments` array; each entry: `{id, file_type, data_url, thumb_url,
@@ -76,11 +76,11 @@ file_size, width, height, extension}`. Received attachments need no special hand
 arrive on `GET /messages` and on the `message.created`/`message.updated` websocket events like
 any other field.
 
-> **Unverified edge:** sending the session's *first* message as an attachment uses multipart
-> `POST /conversations` (same `message[attachments][]` fields). The JSON create path is verified;
-> the multipart create is not yet probed against app.chatwoot.com — verify during e2e. The
-> create response's `message_type` is a string (as with the text path), so the SDK refetches
-> `GET /messages` instead of parsing it.
+> **Attachment-first sends** (verified against app.chatwoot.com): the session's *first* message
+> when it carries a file goes through multipart `POST /messages`, **not** `POST /conversations`.
+> The server lazily creates the conversation and returns a fully parseable Message (int
+> `message_type` + populated `attachments[]`), so the SDK reconciles its optimistic bubble
+> directly from the response — no refetch, no separate "create with attachment" path.
 
 ### Realtime (`wss://<base>/cable`, ActionCable wire protocol)
 

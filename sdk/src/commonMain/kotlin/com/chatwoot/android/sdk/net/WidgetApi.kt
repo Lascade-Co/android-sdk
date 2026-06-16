@@ -69,9 +69,11 @@ internal class WidgetApi(
         }.body()
 
     /**
-     * Uploads an attachment as a (caption-less) message into an existing conversation. Mirrors
-     * the widget's `sendAttachment` multipart shape (`message[attachments][]`, `referer_url`,
-     * `timestamp`); returns the created Message so the caller can reconcile its optimistic bubble.
+     * Uploads an attachment as a (caption-less) message. Mirrors the widget's `sendAttachment`
+     * multipart shape (`message[attachments][]`, `referer_url`, `timestamp`). The endpoint lazily
+     * creates the conversation when none exists yet, so this is also the attachment-*first* path —
+     * there is no multipart `POST /conversations`. Returns the created Message (parseable: int
+     * `message_type` + populated `attachments`) so the caller can reconcile its optimistic bubble.
      */
     suspend fun sendAttachment(
         authToken: String,
@@ -90,23 +92,6 @@ internal class WidgetApi(
             authenticated(authToken)
             contentType(ContentType.Application.Json)
             setBody(CreateConversationRequest(outgoing(content)))
-        }
-    }
-
-    /**
-     * Creates the session's first conversation carrying an attachment (multipart). The create
-     * response's `message_type` is a string (see CONTEXT.md), so — like [createConversation] —
-     * we don't parse it; the caller refetches `GET /messages` to pick up the stored attachment.
-     */
-    suspend fun createConversationWithAttachment(
-        authToken: String,
-        file: PickedFile,
-        onProgress: (Float) -> Unit = {},
-    ) {
-        client.post("$base/api/v1/widget/conversations") {
-            authenticated(authToken)
-            setBody(attachmentForm(file))
-            onUpload { sent, total -> if (total != null && total > 0) onProgress(sent.toFloat() / total) }
         }
     }
 
@@ -131,13 +116,12 @@ internal class WidgetApi(
      * enforces identity validation the server checks [ContactRequest.identifierHash]; otherwise it's
      * optional. Use [updateContact] for attribute-only updates with no identifier.
      */
-    suspend fun setUser(authToken: String, body: ContactRequest) {
+    suspend fun setUser(authToken: String, body: ContactRequest): SetUserResponse =
         client.patch("$base/api/v1/widget/contact/set_user") {
             authenticated(authToken)
             contentType(ContentType.Application.Json)
             setBody(body)
-        }
-    }
+        }.body()
 
     /** Updates the (possibly anonymous) contact's attributes. No identity validation. */
     suspend fun updateContact(authToken: String, body: ContactRequest) {
