@@ -9,7 +9,7 @@ plugins {
 }
 
 subprojects {
-    group = "com.chatwoot.android"
+    group = "com.lascade.chatwoot"
 
     // vanniktech maven-publish + Maven Central publish flow isn't config-cache compatible yet:
     // https://github.com/gradle/gradle/issues/22779. Mark publish tasks as opt-out so the rest
