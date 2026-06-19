@@ -38,8 +38,10 @@ jobs:
     name: Publish sdk ${{ needs.detect.outputs.version }}
     needs: detect
     if: needs.detect.outputs.publish == 'true'
-    # macOS required: the KMP publication includes the iOS targets.
-    runs-on: macos-latest
+    # macos-26 (Xcode 26.x) required: macOS for the iOS targets in the KMP publication,
+    # and pinned to 26 (not macos-latest/macos-15) so Compose Multiplatform 1.11's UIKit
+    # symbols resolve when the build links the iOS-simulator test binary.
+    runs-on: macos-26
     permissions:
       contents: write
     steps:
