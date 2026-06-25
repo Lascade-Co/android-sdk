@@ -1,9 +1,11 @@
 package com.chatwoot.android.sdk.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -24,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,8 +81,6 @@ internal fun InputBar(
         file ?: return
         scope.launch {
             val bytes = file.readBytes()
-            // Use the platform's real MIME (content resolver / UTType) so Chatwoot classifies the
-            // attachment correctly; gallery content:// URIs often have no usable extension.
             val mime = file.mimeType()?.let { "${it.primaryType}/${it.subtype}" }
                 ?: mimeTypeForExtension(file.extension)
             onPickAttachment(PickedFile(file.name, mime, bytes))
@@ -93,68 +94,93 @@ internal fun InputBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(style.surfaceColor)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (recording) {
-            Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Color(0xFFE53935)))
-            Text(
-                text = formatElapsed(elapsedMs),
-                color = style.textColor,
-                fontSize = 15.sp,
-                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-            )
-            IconButton(onClick = { recording = false; recorder.cancel() }) {
-                Text(text = "✕", color = style.secondaryTextColor, fontSize = 20.sp)
-            }
-            IconButton(onClick = {
-                recording = false
-                scope.launch { recorder.stop()?.let(onPickAttachment) }
-            }) {
-                Text(text = "➤", color = style.primaryColor, fontSize = 20.sp)
-            }
-            return@Row
-        }
-
-        Box {
-            IconButton(onClick = { menuOpen = true }, enabled = enabled) {
-                Text(text = "📎", color = style.secondaryTextColor, fontSize = 20.sp)
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                DropdownMenuItem(
-                    text = { Text("Photo or video") },
-                    onClick = { menuOpen = false; mediaPicker.launch() },
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = style.inputMinHeight)
+                .border(1.dp, style.inputBorderColor, style.inputShape)
+                .clip(style.inputShape)
+                .background(style.inputFieldColor)
+                .padding(start = 6.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (recording) {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE53935)),
                 )
-                DropdownMenuItem(
-                    text = { Text("File") },
-                    onClick = { menuOpen = false; filePicker.launch() },
+                Text(
+                    text = formatElapsed(elapsedMs),
+                    color = style.textColor,
+                    fontSize = 15.sp,
+                    fontFamily = style.fontFamily,
+                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 )
-            }
-        }
-        BasicTextField(
-            value = text,
-            onValueChange = { text = it },
-            enabled = enabled,
-            maxLines = 5,
-            textStyle = TextStyle(color = style.textColor, fontSize = 15.sp),
-            decorationBox = { innerTextField ->
-                if (text.isEmpty()) {
-                    Text(text = "Type your message…", color = style.secondaryTextColor, fontSize = 15.sp)
+                IconButton(onClick = { recording = false; recorder.cancel() }) {
+                    Text(text = "✕", color = style.secondaryTextColor, fontSize = 20.sp)
                 }
-                innerTextField()
-            },
-            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-        )
-        when {
-            text.isNotBlank() -> IconButton(onClick = ::submit, enabled = enabled) {
-                Text(text = "➤", color = style.primaryColor, fontSize = 20.sp)
+                SendButton(enabled = enabled, style = style, onClick = {
+                    recording = false
+                    scope.launch { recorder.stop()?.let(onPickAttachment) }
+                })
+                return@Row
             }
-            // Mic shows while permission is grantable; a denial hides it (no error surfaced).
-            !mic.denied -> IconButton(
-                onClick = { if (mic.granted) recorder.start().also { recording = true } else mic.request() },
+
+            Box {
+                IconButton(onClick = { menuOpen = true }, enabled = enabled) {
+                    val attachmentIcon = style.attachmentIcon
+                    if (attachmentIcon != null) {
+                        attachmentIcon()
+                    } else {
+                        Text(text = "+", color = style.secondaryTextColor, fontSize = 24.sp, fontFamily = style.fontFamily)
+                    }
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Photo or video") },
+                        onClick = { menuOpen = false; mediaPicker.launch() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("File") },
+                        onClick = { menuOpen = false; filePicker.launch() },
+                    )
+                }
+            }
+
+            BasicTextField(
+                value = text,
+                onValueChange = { text = it },
                 enabled = enabled,
-            ) {
-                Text(text = "🎤", color = style.secondaryTextColor, fontSize = 20.sp)
+                maxLines = 3,
+                textStyle = TextStyle(color = style.textColor, fontSize = 16.sp, fontFamily = style.fontFamily),
+                cursorBrush = SolidColor(style.accentColor),
+                decorationBox = { innerTextField ->
+                    if (text.isEmpty()) {
+                        Text(
+                            text = style.inputHint,
+                            color = style.secondaryTextColor,
+                            fontSize = 16.sp,
+                            fontFamily = style.fontFamily,
+                        )
+                    }
+                    innerTextField()
+                },
+                modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
+            )
+
+            when {
+                text.isNotBlank() -> SendButton(enabled = enabled, style = style, onClick = ::submit)
+                else -> VoiceButton(
+                    enabled = enabled && !mic.denied,
+                    style = style,
+                    onClick = { if (mic.granted) recorder.start().also { recording = true } else mic.request() },
+                )
             }
         }
     }
