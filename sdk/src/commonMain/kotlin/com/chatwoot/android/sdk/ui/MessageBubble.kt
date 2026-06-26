@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,8 +77,11 @@ internal fun MessageBubble(message: ChatMessage, style: StyleConfig) {
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         val contentColor = if (fromContact) style.onOutgoingBubbleColor else style.onIncomingBubbleColor
+                        val annotatedContent = remember(message.content, contentColor) {
+                            linkify(message.content, contentColor)
+                        }
                         Text(
-                            text = linkify(message.content, contentColor),
+                            text = annotatedContent,
                             color = contentColor,
                             fontSize = 14.sp,
                             lineHeight = 20.sp,

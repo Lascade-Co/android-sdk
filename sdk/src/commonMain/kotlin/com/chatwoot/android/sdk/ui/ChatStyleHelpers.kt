@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -42,16 +42,20 @@ import kotlin.math.sin
 
 /** Rounded dashed outline drawn on top of the content (matches the host "Journey AI" look). */
 internal fun Modifier.dashedBorder(strokeWidth: Dp, color: Color, cornerRadius: Dp): Modifier =
-    drawWithContent {
-        drawContent()
-        drawRoundRect(
-            color = color,
-            cornerRadius = CornerRadius(cornerRadius.toPx()),
-            style = Stroke(
-                width = strokeWidth.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f),
-            ),
+    drawWithCache {
+        val cornerRadiusPx = cornerRadius.toPx()
+        val stroke = Stroke(
+            width = strokeWidth.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f),
         )
+        onDrawWithContent {
+            drawContent()
+            drawRoundRect(
+                color = color,
+                cornerRadius = CornerRadius(cornerRadiusPx),
+                style = stroke,
+            )
+        }
     }
 
 private val typingDotColors = listOf(
@@ -83,10 +87,12 @@ internal fun TypingIndicator(style: StyleConfig, label: String = "typing") {
             modifier = Modifier.padding(start = 4.dp),
         ) {
             typingDotColors.forEachIndexed { index, color ->
-                val offsetY = (sin(phase + index * (2f * PI.toFloat() / 3f)) * 6f).roundToInt()
                 Box(
                     modifier = Modifier
-                        .offset { IntOffset(0, offsetY) }
+                        .offset {
+                            val offsetY = (sin(phase + index * (2f * PI.toFloat() / 3f)) * 6f).roundToInt()
+                            IntOffset(0, offsetY)
+                        }
                         .size(5.5.dp)
                         .clip(CircleShape)
                         .background(color),

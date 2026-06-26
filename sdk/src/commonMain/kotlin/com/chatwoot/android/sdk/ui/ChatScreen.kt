@@ -59,10 +59,12 @@ internal fun ChatScreen(
         if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.size - 1)
     }
 
-    val background = if (style.backgroundGradient.size >= 2) {
-        Brush.verticalGradient(style.backgroundGradient)
-    } else {
-        Brush.verticalGradient(listOf(style.backgroundColor, style.backgroundColor))
+    val background = remember(style.backgroundGradient, style.backgroundColor) {
+        if (style.backgroundGradient.size >= 2) {
+            Brush.verticalGradient(style.backgroundGradient)
+        } else {
+            Brush.verticalGradient(listOf(style.backgroundColor, style.backgroundColor))
+        }
     }
 
     Column(
