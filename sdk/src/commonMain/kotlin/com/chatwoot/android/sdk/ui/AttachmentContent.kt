@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.chatwoot.android.sdk.data.ChatAttachment
 import com.chatwoot.android.sdk.data.ChatMessage
@@ -178,11 +179,21 @@ private fun UploadingAttachment(message: ChatMessage, style: StyleConfig, onCont
 
 @Composable
 private fun FullScreenViewer(onDismiss: () -> Unit, content: @Composable () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        // Dim scrim fills the screen and dismisses on tap; the media is inset with margins so it
+        // shows as a centered overlay instead of stretching edge-to-edge.
         Box(
-            modifier = Modifier.fillMaxSize().background(Color(0xEE000000)).clickable(onClick = onDismiss),
+            modifier = Modifier.fillMaxSize().background(Color(0xCC000000)).clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
-        ) { content() }
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp),
+                contentAlignment = Alignment.Center,
+            ) { content() }
+        }
     }
 }
 
