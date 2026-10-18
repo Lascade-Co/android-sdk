@@ -11,7 +11,7 @@ plugins {
     alias(libs.plugins.vanniktech.maven.publish)
 }
 
-version = "0.1.1"
+version = "0.1.2"
 
 kotlin {
     explicitApi()
