@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
  */
 class ChatRepositoryTest {
 
-    private val config = ChatwootConfig("https://app.chatwoot.com", "wt-test")
+    private val config = ChatwootConfig("https://app.chatwoot.com", "wt-test", voiceNotesEnabled = false)
 
     private val bootstrapHtml =
         "<script>window.authToken = 'jwt-initial'; window.chatwootPubsubToken = 'pub-1';</script>"

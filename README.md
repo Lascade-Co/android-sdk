@@ -31,14 +31,17 @@ Create a *website inbox* in your Chatwoot dashboard, then configure the SDK once
 Chatwoot.configure(
     baseUrl = "https://app.chatwoot.com",   // or your self-hosted URL
     websiteToken = "<website inbox token>",
+    voiceNotesEnabled = false,               // see "Voice notes" below
 )
 ```
 
 Or declare it statically instead:
 
 - **Android** — manifest `<meta-data>`: `com.chatwoot.android.BASE_URL` and
-  `com.chatwoot.android.WEBSITE_TOKEN`
-- **iOS** — Info.plist keys: `ChatwootBaseUrl` and `ChatwootWebsiteToken`
+  `com.chatwoot.android.WEBSITE_TOKEN`, plus optional boolean
+  `com.chatwoot.android.VOICE_NOTES_ENABLED`
+- **iOS** — Info.plist keys: `ChatwootBaseUrl` and `ChatwootWebsiteToken`, plus optional
+  boolean `ChatwootVoiceNotesEnabled`
 
 Then show the chat. On Android/Compose, call `ChatPage` (above). From Swift:
 
@@ -52,16 +55,23 @@ ChatPageViewControllerKt.ChatPageViewController(
 Everything else — anonymous contact creation, conversation persistence across launches,
 history, live agent replies, typing indicators, reconnection — is handled inside.
 
-## Permissions (voice notes)
+## Voice notes (opt-in)
 
-Recording a voice note needs the microphone. The SDK requests it at first use and silently
-hides the mic button if it's unavailable.
+With `voiceNotesEnabled = false` the input bar shows no mic button and the SDK never touches
+the microphone, so apps that don't declare a mic permission are safe. The static
+manifest/Info.plist keys default to false when absent. Sending pre-recorded audio files through
+the attachment picker works either way.
 
-- **Android** — `RECORD_AUDIO` is declared in the SDK manifest and merges into your app
-  automatically; nothing to add.
-- **iOS** — you must add `NSMicrophoneUsageDescription` (with a user-facing reason) to your
-  app's `Info.plist`. iOS aborts at permission-request time if the key is missing, and the SDK
+To enable it, pass `voiceNotesEnabled = true` to `configure` (or set the static key to true) and
+declare the permission:
+
+- **Android** — add `<uses-permission android:name="android.permission.RECORD_AUDIO" />` to
+  your app manifest. The SDK requests it at runtime on the first mic tap.
+- **iOS** — add `NSMicrophoneUsageDescription` (with a user-facing reason) to your app's
+  `Info.plist`. iOS aborts at permission-request time if the key is missing, and the SDK
   cannot supply it on your behalf.
+
+If the user denies the permission, the mic button is disabled.
 
 Picking image/video/file attachments needs no runtime permission on either platform.
 

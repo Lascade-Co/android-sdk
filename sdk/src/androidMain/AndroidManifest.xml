@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Voice notes. Host apps still request it at runtime; the SDK does so at first record tap. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- No RECORD_AUDIO: voice notes are opt-in (ChatwootConfig.voiceNotesEnabled), so hosts that enable
+         them declare the permission themselves; the SDK requests it at first record tap. -->
 
     <application>
         <provider

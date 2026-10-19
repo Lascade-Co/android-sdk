@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A Kotlin Multiplatform (Android + iOS) chat SDK for Chatwoot, published as
 `com.chatwoot.android:sdk`. The public surface is `ChatPage(show, onFinish,
 styleConfig = DefaultStyle)` (Compose Multiplatform), the `Chatwoot` singleton
-(`configure()`, plus the visitor-identity calls `setUser()` / `setCustomAttributes()` /
+(`configure(baseUrl, websiteToken, voiceNotesEnabled)`, plus the visitor-identity calls `setUser()` / `setCustomAttributes()` /
 `reset()`), and, on iOS, the `ChatPageViewController()` wrapper — everything else is
 `internal` (the module uses `explicitApi()`).
 

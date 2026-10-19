@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
  * @property sendIcon Optional override for the glyph inside the circular send button. Null = a
  *   built-in up-arrow drawn on a canvas.
  * @property micIcon Optional override for the glyph inside the circular voice-note button (shown
- *   when the input is empty and mic permission is available). Null = a built-in "voice levels"
+ *   when the input is empty, `ChatwootConfig.voiceNotesEnabled` is on and mic permission is available). Null = a built-in "voice levels"
  *   glyph (three vertical bars, the middle one elongated) drawn on a canvas, matching the send
  *   button's white-circle treatment.
  * @property insetsHandledByHost Set true when the host's View layer already applies the system-bar

@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 internal fun InputBar(
     style: StyleConfig,
     enabled: Boolean,
+    voiceNotesEnabled: Boolean,
     onSend: (String) -> Unit,
     onPickAttachment: (PickedFile) -> Unit,
 ) {
@@ -57,8 +58,10 @@ internal fun InputBar(
     var recording by remember { mutableStateOf(false) }
     var elapsedMs by remember { mutableStateOf(0L) }
     val scope = rememberCoroutineScope()
-    val recorder = rememberAudioRecorder()
-    val mic = rememberMicPermission()
+    // Disabled = never construct the recorder or permission controller, so a host without mic
+    // permission declared never reaches AVAudioSession / RECORD_AUDIO code paths.
+    val recorder = if (voiceNotesEnabled) rememberAudioRecorder() else null
+    val mic = if (voiceNotesEnabled) rememberMicPermission() else null
 
     LaunchedEffect(recording) {
         if (recording) {
@@ -107,7 +110,7 @@ internal fun InputBar(
                 .padding(start = 6.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (recording) {
+            if (recording && recorder != null) {
                 Box(
                     modifier = Modifier
                         .padding(start = 8.dp)
@@ -175,7 +178,8 @@ internal fun InputBar(
             )
 
             when {
-                text.isNotBlank() -> SendButton(enabled = enabled, style = style, onClick = ::submit)
+                text.isNotBlank() || recorder == null || mic == null ->
+                    SendButton(enabled = enabled && text.isNotBlank(), style = style, onClick = ::submit)
                 else -> VoiceButton(
                     enabled = enabled && !mic.denied,
                     style = style,

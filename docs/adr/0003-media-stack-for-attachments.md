@@ -21,6 +21,11 @@ playback, and file picking, so each capability is chosen separately. Phase 2 add
 - **Voice-note recording (Phase 2):** same `expect`/`actual` approach — `MediaRecorder` (AAC/m4a)
   on Android, `AVAudioRecorder` on iOS; the clip is sent through the existing attachment path.
   Mic permission is requested at first use; on denial the SDK silently hides the mic affordance.
+  Recording is **opt-in** (`voiceNotesEnabled`, a required `configure()` argument;
+  absent from the manifest/Info.plist fallback = false): a host that never declared
+  `NSMicrophoneUsageDescription` would crash on iOS at the permission request, so the SDK neither
+  shows the mic nor constructs the recorder/permission controller unless enabled, and the SDK
+  manifest no longer merges `RECORD_AUDIO` into every host — enabling hosts declare it.
 - **Picker:** FileKit (`filekit-dialogs-compose`) — one `commonMain` call returns the picked
   file, using PHPicker/UIDocumentPicker on iOS and the Photo Picker/OpenDocument on Android,
   all permission-free. The alternative (rolling our own `expect`/`actual` PHPicker delegate
