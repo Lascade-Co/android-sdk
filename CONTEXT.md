@@ -39,7 +39,8 @@ them in code, docs, and discussion.
 - **Attachment** — a file carried by a Message. Each has a `file_type` (`image`, `audio`,
   `video`, `file`, plus rarer kinds — anything other than the first three renders as a generic
   file), a `data_url` (original) and optional `thumb_url` (preview). Sent one-per-message and
-  caption-less (the upload carries no `content`). _Avoid_: media, upload.
+  caption-less (the upload carries no `content`). `audio` attachments (including an agent's
+  voice note) play inline; the SDK never records audio itself (ADR 0005). _Avoid_: media, upload.
 
 ## Protocol contract (verified against app.chatwoot.com, June 2026)
 

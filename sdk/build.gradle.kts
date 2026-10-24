@@ -71,14 +71,52 @@ kotlin {
             // Video + audio playback. iOS uses AVFoundation, which ships with Kotlin/Native.
             implementation(libs.media3.exoplayer)
             implementation(libs.media3.ui)
-            // Runtime mic-permission request for voice-note recording.
-            implementation(libs.androidx.activity.compose)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }
     }
 }
+
+// The SDK must never link a microphone API (ADR 0005): on iOS, App Store Connect rejects any app
+// binary that references AVAudioRecorder / requestRecordPermission without an
+// NSMicrophoneUsageDescription (ITMS-90683), even if the code path never runs; on Android the
+// SDK must not contribute RECORD_AUDIO to its hosts. Fails `check` if a recording API reappears
+// anywhere under src/ (main and test sources, manifests included).
+val verifyNoRecordingApis = tasks.register("verifyNoRecordingApis") {
+    group = "verification"
+    description = "Fails if SDK sources reference a microphone/recording API (ADR 0005)."
+    val sources = fileTree("src") { include("**/*.kt", "**/*.xml") }
+    val forbidden = listOf(
+        "AVAudioRecorder",
+        "requestRecordPermission",
+        "recordPermission",
+        "AVAudioSessionCategoryPlayAndRecord",
+        "AVAudioSessionCategoryRecord",
+        "AVAudioApplication",
+        "AVCaptureDevice",
+        "MediaRecorder",
+        "AudioRecord",
+        "RECORD_AUDIO",
+    )
+    inputs.files(sources).withPropertyName("sources")
+    inputs.property("forbidden", forbidden)
+    doLast {
+        val hits = sources.files.sorted().flatMap { file ->
+            file.readLines().mapIndexedNotNull { index, line ->
+                forbidden.firstOrNull { line.contains(it, ignoreCase = true) }
+                    ?.let { "${file.path}:${index + 1}: $it" }
+            }
+        }
+        if (hits.isNotEmpty()) {
+            throw GradleException(
+                "Recording APIs are not allowed in the SDK (ADR 0005):\n" + hits.joinToString("\n"),
+            )
+        }
+    }
+}
+
+tasks.named("check") { dependsOn(verifyNoRecordingApis) }
 
 mavenPublishing {
     // publishToMavenCentral(automaticRelease = true) and signing are configured centrally in

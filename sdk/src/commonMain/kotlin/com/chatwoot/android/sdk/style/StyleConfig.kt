@@ -46,10 +46,6 @@ import androidx.compose.ui.unit.dp
  *   pill. Null = a default "+" glyph.
  * @property sendIcon Optional override for the glyph inside the circular send button. Null = a
  *   built-in up-arrow drawn on a canvas.
- * @property micIcon Optional override for the glyph inside the circular voice-note button (shown
- *   when the input is empty, `ChatwootConfig.voiceNotesEnabled` is on and mic permission is available). Null = a built-in "voice levels"
- *   glyph (three vertical bars, the middle one elongated) drawn on a canvas, matching the send
- *   button's white-circle treatment.
  * @property insetsHandledByHost Set true when the host's View layer already applies the system-bar
  *   and keyboard insets — e.g. an Activity using `adjustResize` with a `fitsSystemWindows` root. The
  *   SDK then consumes no window insets of its own (neither the IME on the input bar nor the status
@@ -85,7 +81,6 @@ public data class StyleConfig(
     val cancelIcon: (@Composable () -> Unit)? = null,
     val attachmentIcon: (@Composable () -> Unit)? = null,
     val sendIcon: (@Composable () -> Unit)? = null,
-    val micIcon: (@Composable () -> Unit)? = null,
     val insetsHandledByHost: Boolean = false,
     val title: String = "Chat with us",
     val timeFormatter: ((epochSeconds: Long) -> String)? = null,

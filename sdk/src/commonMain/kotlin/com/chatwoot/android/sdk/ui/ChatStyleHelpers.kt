@@ -136,46 +136,6 @@ internal fun SendButton(enabled: Boolean, style: StyleConfig, onClick: () -> Uni
     }
 }
 
-/**
- * Circular voice-note button — the same white-circle treatment as [SendButton], shown when the
- * input is empty. Renders [StyleConfig.micIcon] when the host supplies one, otherwise a
- * canvas-drawn "voice levels" glyph: three vertical bars with the middle one elongated.
- */
-@Composable
-internal fun VoiceButton(enabled: Boolean, style: StyleConfig, onClick: () -> Unit) {
-    val bg = if (enabled) style.accentColor else style.accentColor.copy(alpha = 0.45f)
-    Box(
-        modifier = Modifier
-            .size(50.dp)
-            .clip(CircleShape)
-            .background(bg)
-            .clickable(enabled = enabled, onClick = onClick)
-            .alpha(if (enabled) 1f else 0.6f),
-        contentAlignment = Alignment.Center,
-    ) {
-        val custom = style.micIcon
-        if (custom != null) {
-            custom()
-        } else {
-            val fg = style.onAccentColor
-            Canvas(modifier = Modifier.size(20.dp)) {
-                val w = size.width
-                val h = size.height
-                val cx = w / 2f
-                val mid = h / 2f
-                val stroke = w * 0.13f
-                val gap = w * 0.27f
-                // Two short side bars and a tall middle bar — reads as a voice / audio-levels mark.
-                val shortHalf = h * 0.16f
-                val tallHalf = h * 0.36f
-                drawLine(fg, Offset(cx - gap, mid - shortHalf), Offset(cx - gap, mid + shortHalf), strokeWidth = stroke, cap = StrokeCap.Round)
-                drawLine(fg, Offset(cx, mid - tallHalf), Offset(cx, mid + tallHalf), strokeWidth = stroke, cap = StrokeCap.Round)
-                drawLine(fg, Offset(cx + gap, mid - shortHalf), Offset(cx + gap, mid + shortHalf), strokeWidth = stroke, cap = StrokeCap.Round)
-            }
-        }
-    }
-}
-
 /** Centered "Today / Yesterday / date" chip shown above the first message of each day. */
 @Composable
 internal fun DateSeparator(text: String, style: StyleConfig) {

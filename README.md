@@ -31,17 +31,14 @@ Create a *website inbox* in your Chatwoot dashboard, then configure the SDK once
 Chatwoot.configure(
     baseUrl = "https://app.chatwoot.com",   // or your self-hosted URL
     websiteToken = "<website inbox token>",
-    voiceNotesEnabled = false,               // see "Voice notes" below
 )
 ```
 
 Or declare it statically instead:
 
 - **Android** — manifest `<meta-data>`: `com.chatwoot.android.BASE_URL` and
-  `com.chatwoot.android.WEBSITE_TOKEN`, plus optional boolean
-  `com.chatwoot.android.VOICE_NOTES_ENABLED`
-- **iOS** — Info.plist keys: `ChatwootBaseUrl` and `ChatwootWebsiteToken`, plus optional
-  boolean `ChatwootVoiceNotesEnabled`
+  `com.chatwoot.android.WEBSITE_TOKEN`
+- **iOS** — Info.plist keys: `ChatwootBaseUrl` and `ChatwootWebsiteToken`
 
 Then show the chat. On Android/Compose, call `ChatPage` (above). From Swift:
 
@@ -55,25 +52,20 @@ ChatPageViewControllerKt.ChatPageViewController(
 Everything else — anonymous contact creation, conversation persistence across launches,
 history, live agent replies, typing indicators, reconnection — is handled inside.
 
-## Voice notes (opt-in)
+## Permissions
 
-With `voiceNotesEnabled = false` the input bar shows no mic button and the SDK never touches
-the microphone, so apps that don't declare a mic permission are safe. The static
-manifest/Info.plist keys default to false when absent. Sending pre-recorded audio files through
-the attachment picker works either way.
-
-To enable it, pass `voiceNotesEnabled = true` to `configure` (or set the static key to true) and
-declare the permission:
-
-- **Android** — add `<uses-permission android:name="android.permission.RECORD_AUDIO" />` to
-  your app manifest. The SDK requests it at runtime on the first mic tap.
-- **iOS** — add `NSMicrophoneUsageDescription` (with a user-facing reason) to your app's
-  `Info.plist`. iOS aborts at permission-request time if the key is missing, and the SDK
-  cannot supply it on your behalf.
-
-If the user denies the permission, the mic button is disabled.
+The SDK needs no microphone permission and links no recording API, so your app does not need
+`RECORD_AUDIO` or `NSMicrophoneUsageDescription` for it (ADR 0005). Audio attachments in the
+thread, such as an agent's voice note, still play. Contacts can send audio files through the
+attachment picker.
 
 Picking image/video/file attachments needs no runtime permission on either platform.
+
+### Upgrading from 0.2.x
+
+0.3.0 removes voice-note recording. Drop the `voiceNotesEnabled` argument from `configure`
+and any `micIcon` override from your `StyleConfig`. The `VOICE_NOTES_ENABLED` /
+`ChatwootVoiceNotesEnabled` keys are now ignored and can be deleted.
 
 ## Identifying the visitor
 

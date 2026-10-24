@@ -22,6 +22,5 @@ internal actual fun platformDefaultConfig(): ChatwootConfig? {
         .metaData ?: return null
     val baseUrl = metaData.getString("com.chatwoot.android.BASE_URL") ?: return null
     val token = metaData.getString("com.chatwoot.android.WEBSITE_TOKEN") ?: return null
-    val voiceNotes = metaData.getBoolean("com.chatwoot.android.VOICE_NOTES_ENABLED", false)
-    return ChatwootConfig(baseUrl, token, voiceNotes)
+    return ChatwootConfig(baseUrl, token)
 }

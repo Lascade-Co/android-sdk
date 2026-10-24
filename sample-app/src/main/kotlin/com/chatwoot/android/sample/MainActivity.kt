@@ -24,7 +24,6 @@ class MainActivity : ComponentActivity() {
         Chatwoot.configure(
             baseUrl = BuildConfig.CHATWOOT_BASE_URL,
             websiteToken = BuildConfig.CHATWOOT_WEBSITE_TOKEN,
-            voiceNotesEnabled = true, // requires RECORD_AUDIO in the app manifest
         )
 
         // Identify the visitor so agents see a named contact instead of an anonymous one.

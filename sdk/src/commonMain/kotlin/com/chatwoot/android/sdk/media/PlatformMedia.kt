@@ -11,8 +11,9 @@ import androidx.compose.ui.Modifier
 internal expect fun VideoPlayer(url: String, modifier: Modifier)
 
 /**
- * A lightweight audio player for voice-note bubbles, exposing Compose-observable state so a
- * custom play/pause + progress row can drive it. Backed by Media3 (Android) / AVPlayer (iOS).
+ * A lightweight audio player for audio attachments in the thread (e.g. an agent's voice note),
+ * exposing Compose-observable state so a custom play/pause + progress row can drive it. Backed by
+ * Media3 (Android) / AVPlayer (iOS) — playback only; the SDK never records (ADR 0005).
  */
 internal interface AudioPlayback {
     val isPlaying: Boolean

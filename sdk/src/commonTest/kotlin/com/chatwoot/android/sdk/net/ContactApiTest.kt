@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 
 class ContactApiTest {
 
-    private val config = ChatwootConfig("https://app.chatwoot.com", "wt-1", voiceNotesEnabled = false)
+    private val config = ChatwootConfig("https://app.chatwoot.com", "wt-1")
 
     /** Captures requests and replies with [responseJson] (sent as application/json). */
     private fun apiCapturing(

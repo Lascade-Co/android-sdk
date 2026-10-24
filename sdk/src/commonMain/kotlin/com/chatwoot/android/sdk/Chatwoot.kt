@@ -10,16 +10,10 @@ import kotlinx.coroutines.flow.update
  *
  * @property baseUrl Chatwoot installation URL, e.g. `https://app.chatwoot.com`.
  * @property websiteToken The website inbox token from the Chatwoot dashboard.
- * @property voiceNotesEnabled Shows the mic button for recording voice notes. Recording needs the
- *   microphone permission the host app must declare (`RECORD_AUDIO` in the Android manifest,
- *   `NSMicrophoneUsageDescription` in the iOS Info.plist — iOS aborts without it). When false, the
- *   SDK never touches the recorder or the permission. Sending pre-recorded audio files through the
- *   attachment picker works either way.
  */
 public data class ChatwootConfig(
     val baseUrl: String,
     val websiteToken: String,
-    val voiceNotesEnabled: Boolean,
 ) {
     init {
         require(baseUrl.startsWith("http")) { "baseUrl must be an http(s) URL, got '$baseUrl'" }
@@ -58,16 +52,16 @@ internal data class ChatwootIdentity(
  * `application(_:didFinishLaunchingWithOptions:)`) or declare the platform fallback:
  *
  * - Android: `<meta-data>` entries `com.chatwoot.android.BASE_URL` and
- *   `com.chatwoot.android.WEBSITE_TOKEN` in `AndroidManifest.xml`, plus an optional boolean
- *   `com.chatwoot.android.VOICE_NOTES_ENABLED` (absent = false).
- * - iOS: `ChatwootBaseUrl` and `ChatwootWebsiteToken` keys in `Info.plist`, plus an optional
- *   boolean `ChatwootVoiceNotesEnabled` (absent = false).
+ *   `com.chatwoot.android.WEBSITE_TOKEN` in `AndroidManifest.xml`.
+ * - iOS: `ChatwootBaseUrl` and `ChatwootWebsiteToken` keys in `Info.plist`.
+ *
+ * The SDK records no audio and needs no microphone permission (ADR 0005).
  */
 public object Chatwoot {
     private var explicit: ChatwootConfig? = null
 
-    public fun configure(baseUrl: String, websiteToken: String, voiceNotesEnabled: Boolean) {
-        explicit = ChatwootConfig(baseUrl, websiteToken, voiceNotesEnabled)
+    public fun configure(baseUrl: String, websiteToken: String) {
+        explicit = ChatwootConfig(baseUrl, websiteToken)
     }
 
     private val _identity = MutableStateFlow(ChatwootIdentity())
@@ -122,7 +116,7 @@ public object Chatwoot {
 
     internal val config: ChatwootConfig
         get() = explicit ?: platformDefaultConfig() ?: error(
-            "Chatwoot SDK is not configured. Call Chatwoot.configure(baseUrl, websiteToken, voiceNotesEnabled) " +
+            "Chatwoot SDK is not configured. Call Chatwoot.configure(baseUrl, websiteToken) " +
                 "or provide the platform metadata (Android manifest <meta-data> " +
                 "com.chatwoot.android.BASE_URL / com.chatwoot.android.WEBSITE_TOKEN, " +
                 "iOS Info.plist ChatwootBaseUrl / ChatwootWebsiteToken)."

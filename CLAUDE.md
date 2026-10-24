@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A Kotlin Multiplatform (Android + iOS) chat SDK for Chatwoot, published as
 `com.chatwoot.android:sdk`. The public surface is `ChatPage(show, onFinish,
 styleConfig = DefaultStyle)` (Compose Multiplatform), the `Chatwoot` singleton
-(`configure(baseUrl, websiteToken, voiceNotesEnabled)`, plus the visitor-identity calls `setUser()` / `setCustomAttributes()` /
+(`configure(baseUrl, websiteToken)`, plus the visitor-identity calls `setUser()` / `setCustomAttributes()` /
 `reset()`), and, on iOS, the `ChatPageViewController()` wrapper — everything else is
 `internal` (the module uses `explicitApi()`).
 
@@ -15,7 +15,7 @@ styleConfig = DefaultStyle)` (Compose Multiplatform), the `Chatwoot` singleton
 contract (REST + ActionCable websocket). The upstream wiki this project started from is
 stale — `CONTEXT.md` reflects reality as probed against app.chatwoot.com; trust it over
 the wiki. `docs/adr/` records the load-bearing decisions (Maven coordinates, KMP+CMP,
-media stack, visitor identity).
+media stack, visitor identity, no voice-note recording).
 
 ## Commands
 
@@ -67,6 +67,10 @@ Key invariants:
   identifier is set, else `PATCH /widget/contact`. HMAC `identifier_hash` is **host-supplied**
   (computed server-side) — never compute it in the SDK. A changed identifier clears the stored
   session so the next bootstrap starts a fresh contact. See ADR 0004.
+- No microphone API anywhere (ADR 0005): no recorder, no `RECORD_AUDIO`, no
+  `AVAudioRecorder` / record-permission calls. App Store Connect rejects a binary that merely
+  links them (ITMS-90683). `:sdk:verifyNoRecordingApis` (part of `check`) enforces it. Audio
+  attachment *playback* is fine.
 - Platform code is minimal by design: expect/actual for the config fallback
   (manifest meta-data / Info.plist) and the Ktor engine comes from the classpath
   (OkHttp on Android, Darwin on iOS). Keep new code in `commonMain`.

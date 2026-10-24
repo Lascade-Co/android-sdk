@@ -30,7 +30,6 @@ import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import com.chatwoot.android.sdk.ChatViewModel
-import com.chatwoot.android.sdk.Chatwoot
 import com.chatwoot.android.sdk.style.StyleConfig
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -49,8 +48,6 @@ internal fun ChatScreen(
 
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
-    // Fixed for the session so the mic affordance can't appear/vanish mid-recording.
-    val voiceNotesEnabled = remember { Chatwoot.config.voiceNotesEnabled }
 
     val dateLabels = remember(state.messages, style.dateSeparatorFormatter) {
         style.dateSeparatorFormatter?.let { format ->
@@ -120,7 +117,6 @@ internal fun ChatScreen(
         InputBar(
             style = style,
             enabled = !state.loading,
-            voiceNotesEnabled = voiceNotesEnabled,
             onSend = viewModel::send,
             onPickAttachment = viewModel::sendAttachment,
         )
