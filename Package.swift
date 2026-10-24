@@ -16,8 +16,8 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "ChatwootSDK",
-            url: "https://github.com/Lascade-Co/android-sdk/releases/download/sdk-v0.2.0/ChatwootSDK.xcframework.zip",
-            checksum: "5695027f62f4b71e7724a9a339e5ee932005aea2cdd965f6c49fa16e0370ef6d"
+            url: "https://github.com/Lascade-Co/android-sdk/releases/download/sdk-v0.3.0/ChatwootSDK.xcframework.zip",
+            checksum: "693329d4118cd6edfa03f98fed5f2ce634ab7dff26daec5c4f082de68dc2964f"
         )
     ]
 )
