@@ -17,11 +17,31 @@ ChatPage(
 **Android / KMP (Maven Central):**
 
 ```kotlin
-implementation("com.chatwoot.android:sdk:0.1.0")
+implementation("com.lascade.chatwoot:sdk:0.4.0")
 ```
 
 **iOS (Swift Package Manager):** add this repo as a package dependency — the
 `ChatwootSDK` binary target ships as an XCFramework attached to GitHub releases.
+The Swift package provides the core chat SDK without voice-note capture.
+
+**Voice notes in a Kotlin Multiplatform or Android app (opt in):** use the voice module
+instead of a direct dependency on `sdk`. It exposes the core SDK transitively:
+
+```kotlin
+implementation("com.lascade.chatwoot:sdk-voice:0.4.0")
+```
+
+Then supply its platform recorder from Compose:
+
+```kotlin
+ChatPage(
+    show = showChat,
+    onFinish = { showChat = false },
+    voiceNoteRecorder = rememberVoiceNoteRecorder(),
+)
+```
+
+If `voiceNoteRecorder` is omitted, the input bar has no microphone control.
 
 ## Setup
 
@@ -54,12 +74,35 @@ history, live agent replies, typing indicators, reconnection — is handled insi
 
 ## Permissions
 
-The SDK needs no microphone permission and links no recording API, so your app does not need
-`RECORD_AUDIO` or `NSMicrophoneUsageDescription` for it (ADR 0005). Audio attachments in the
-thread, such as an agent's voice note, still play. Contacts can send audio files through the
-attachment picker.
+Core `sdk` needs no microphone permission and links no recording API. Audio attachments
+in the thread, such as an agent's voice note, still play, and contacts can send audio
+files through the attachment picker.
+
+If you add `sdk-voice`, declare the permission in the **host app**. The module does not
+contribute an Android permission or an iOS usage string:
+
+```xml
+<!-- Android app's AndroidManifest.xml -->
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+```
+
+```xml
+<!-- iOS app's Info.plist -->
+<key>NSMicrophoneUsageDescription</key>
+<string>Record voice notes to send in chat.</string>
+```
+
+The iOS demo builds one `ChatwootSDKVoice` framework that exports the core SDK. Swift
+Package Manager consumers only receive the core `ChatwootSDK` XCFramework for now.
 
 Picking image/video/file attachments needs no runtime permission on either platform.
+
+### Upgrading to 0.4.0
+
+Voice notes return as an additive, opt-in module. Existing `ChatPage` calls keep the
+0.3.0 input bar. To enable the microphone button, add `sdk-voice`, declare the host
+permission above, and pass `rememberVoiceNoteRecorder()`. Voice notes are sent as
+ordinary audio attachments and are capped at two minutes.
 
 ### Upgrading from 0.2.x
 
@@ -103,10 +146,16 @@ ChatPage(show, onFinish, styleConfig = DefaultStyle.copy(
 ))
 ```
 
+For voice-note controls, `StyleConfig` also provides `micIcon`,
+`voiceNoteRecordLabel`, `voiceNoteCancelLabel`, `voiceNoteSendLabel`,
+`micAccessOffMessage`, and `openSettingsLabel`. The labels have English defaults;
+replace them for your app's language and accessibility text.
+
 ## Layout
 
 ```
 ├── sdk/          # the KMP library (commonMain + androidMain/iosMain)
+├── sdk-voice/    # opt-in Android/iOS voice-note recorder
 ├── sample-app/   # Android demo — put chatwoot.baseUrl / chatwoot.websiteToken in local.properties
 ├── iosApp/       # iOS demo (Xcode project, builds the framework via Gradle)
 ├── docs/adr/     # architecture decision records

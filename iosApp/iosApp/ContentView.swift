@@ -1,5 +1,5 @@
 import SwiftUI
-import ChatwootSDK
+import ChatwootSDKVoice
 
 struct ContentView: View {
     @State private var showChat = false
@@ -19,7 +19,7 @@ struct ChatView: UIViewControllerRepresentable {
     let onFinish: () -> Void
 
     func makeUIViewController(context: Context) -> UIViewController {
-        ChatPageViewControllerKt.ChatPageViewController(
+        VoiceChatPageViewControllerKt.VoiceChatPageViewController(
             onFinish: onFinish,
             styleConfig: StyleConfigKt.DefaultStyle
         )

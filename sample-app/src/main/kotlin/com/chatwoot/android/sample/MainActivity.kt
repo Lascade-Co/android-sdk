@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.chatwoot.android.sdk.ChatPage
 import com.chatwoot.android.sdk.Chatwoot
+import com.chatwoot.android.sdk.voice.rememberVoiceNoteRecorder
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +42,11 @@ class MainActivity : ComponentActivity() {
                 var showChat by remember { mutableStateOf(false) }
 
                 if (showChat) {
-                    ChatPage(show = true, onFinish = { showChat = false })
+                    ChatPage(
+                        show = true,
+                        onFinish = { showChat = false },
+                        voiceNoteRecorder = rememberVoiceNoteRecorder(),
+                    )
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Button(onClick = { showChat = true }) {

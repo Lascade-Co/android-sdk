@@ -1,5 +1,5 @@
 import SwiftUI
-import ChatwootSDK
+import ChatwootSDKVoice
 
 @main
 struct iOSApp: App {

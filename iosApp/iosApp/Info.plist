@@ -18,6 +18,8 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record voice notes to send in chat.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<!-- Required by Compose Multiplatform on iOS (PlistSanityCheck aborts without it). -->

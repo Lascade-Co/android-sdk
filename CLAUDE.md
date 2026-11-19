@@ -5,23 +5,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 A Kotlin Multiplatform (Android + iOS) chat SDK for Chatwoot, published as
-`com.chatwoot.android:sdk`. The public surface is `ChatPage(show, onFinish,
-styleConfig = DefaultStyle)` (Compose Multiplatform), the `Chatwoot` singleton
+`com.lascade.chatwoot:sdk` with an opt-in `com.lascade.chatwoot:sdk-voice`
+recorder module. The core public surface is `ChatPage(show, onFinish,
+styleConfig = DefaultStyle, voiceNoteRecorder = null)` (Compose Multiplatform), the `Chatwoot` singleton
 (`configure(baseUrl, websiteToken)`, plus the visitor-identity calls `setUser()` / `setCustomAttributes()` /
 `reset()`), and, on iOS, the `ChatPageViewController()` wrapper — everything else is
-`internal` (the module uses `explicitApi()`).
+`internal` (both modules use `explicitApi()`). The voice module exposes
+`rememberVoiceNoteRecorder()` and an iOS demo wrapper.
 
 **Read `CONTEXT.md` first** for the domain glossary and the *verified* Chatwoot protocol
 contract (REST + ActionCable websocket). The upstream wiki this project started from is
 stale — `CONTEXT.md` reflects reality as probed against app.chatwoot.com; trust it over
 the wiki. `docs/adr/` records the load-bearing decisions (Maven coordinates, KMP+CMP,
-media stack, visitor identity, no voice-note recording).
+media stack, visitor identity, and the opt-in voice-note module).
 
 ## Commands
 
 ```bash
 ./gradlew build                       # all targets + tests (requires macOS for iOS)
 ./gradlew :sdk:testAndroidHostTest    # JVM unit tests only (fastest loop)
+./gradlew :sdk-voice:testAndroidHostTest  # voice module host tests
 ./gradlew :sdk:iosSimulatorArm64Test  # common tests on the iOS simulator
 ./gradlew :sdk:publishToMavenLocal    # local publish, no signing needed
 ./gradlew :sample-app:installDebug    # Android demo on a connected device/emulator
@@ -39,7 +42,7 @@ BuildConfig.
 
 ## Architecture
 
-One KMP module, `:sdk` (targets: `androidLibrary` via AGP's
+Core `:sdk` and opt-in `:sdk-voice` are KMP modules (targets: `androidLibrary` via AGP's
 `com.android.kotlin.multiplatform.library`, `iosArm64`, `iosSimulatorArm64`). Data flows:
 
 ```
@@ -67,10 +70,10 @@ Key invariants:
   identifier is set, else `PATCH /widget/contact`. HMAC `identifier_hash` is **host-supplied**
   (computed server-side) — never compute it in the SDK. A changed identifier clears the stored
   session so the next bootstrap starts a fresh contact. See ADR 0004.
-- No microphone API anywhere (ADR 0005): no recorder, no `RECORD_AUDIO`, no
-  `AVAudioRecorder` / record-permission calls. App Store Connect rejects a binary that merely
-  links them (ITMS-90683). `:sdk:verifyNoRecordingApis` (part of `check`) enforces it. Audio
-  attachment *playback* is fine.
+- No microphone API in core `:sdk` (ADR 0005); recording lives only in opt-in
+  `:sdk-voice` (ADR 0006). App Store Connect rejects a binary that links recording APIs
+  without a host usage string (ITMS-90683). `:sdk:verifyNoRecordingApis` (part of `check`)
+  guards the core sources. Audio attachment playback remains in core.
 - Platform code is minimal by design: expect/actual for the config fallback
   (manifest meta-data / Info.plist) and the Ktor engine comes from the classpath
   (OkHttp on Android, Darwin on iOS). Keep new code in `commonMain`.
@@ -80,15 +83,14 @@ Key invariants:
 - Root `build.gradle.kts` centralises group + vanniktech maven-publish
   (`publishToMavenCentral(automaticRelease = true)`, signing only when
   `ORG_GRADLE_PROJECT_signingInMemoryKey` is set, config-cache opt-out for publish tasks).
-  The `:sdk` module owns its own `version` and `pom {}`.
+  Both published modules read `chatwoot.version` from `gradle.properties` and own a `pom {}`.
 - Repositories only in `settings.gradle.kts` (`FAIL_ON_PROJECT_REPOS`); versions only in
   `gradle/libs.versions.toml`. JVM target 21. The Compose compiler plugin version is the
   Kotlin version.
 - `kotlin.daemon.jvmargs`/`kotlin.native.jvmArgs` are raised in `gradle.properties` —
   Kotlin/Native linking of Compose OOMs at the default heap; don't remove them.
 - CI (`.github/workflows/`): `build.yml` runs `./gradlew build` on macOS;
-  `publish.yml` publishes **only when `version = "…"` changes** in `sdk/build.gradle.kts`
+  `publish.yml` publishes **only when `chatwoot.version` changes** in `gradle.properties`
   on master, then builds the XCFramework, attaches it to a `sdk-vX.Y.Z` GitHub release and
-  rewrites `Package.swift` (url + checksum) for SPM consumers.
-- Publishing to Maven Central requires Chatwoot's verified Sonatype namespace
-  (`com.chatwoot`) — expected to stay red until upstreaming (ADR 0001).
+  rewrites `Package.swift` (url + checksum) for SPM consumers. The XCFramework remains
+  core `:sdk` only; the Maven publish step includes both modules.
