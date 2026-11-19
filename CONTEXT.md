@@ -40,7 +40,12 @@ them in code, docs, and discussion.
   `video`, `file`, plus rarer kinds — anything other than the first three renders as a generic
   file), a `data_url` (original) and optional `thumb_url` (preview). Sent one-per-message and
   caption-less (the upload carries no `content`). `audio` attachments (including an agent's
-  voice note) play inline; the SDK never records audio itself (ADR 0005). _Avoid_: media, upload.
+  voice note) play inline. Core `:sdk` never records audio (ADR 0005); recording comes only from the
+  opt-in `sdk-voice` module (ADR 0006). _Avoid_: media, upload.
+- **Voice note** — a short audio clip the contact records in the chat (tap the mic, then send),
+  capped at 2 minutes and sent as an ordinary `audio` **attachment** (AAC in `.m4a`). Recording needs
+  the host to add `sdk-voice` and declare the microphone permission (ADR 0006). An agent's voice note
+  is just an incoming `audio` attachment. _Avoid_: audio message, recording (for the sent clip).
 
 ## Protocol contract (verified against app.chatwoot.com, June 2026)
 

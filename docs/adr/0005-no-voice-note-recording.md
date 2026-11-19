@@ -1,6 +1,7 @@
 # 0005 — No voice-note recording; the SDK links no microphone API
 
-Date: 2026-10-24 · Status: accepted · Supersedes the voice-note recording part of ADR 0003
+Date: 2026-10-24 · Status: accepted for core `:sdk`; recording returns in the opt-in `sdk-voice`
+module (ADR 0006) · Supersedes the voice-note recording part of ADR 0003
 
 ## Context
 
