@@ -111,7 +111,11 @@ private class IosVoiceNoteRecorder : VoiceNoteRecorder {
 
     override fun openSettings() {
         NSURL.URLWithString(UIApplicationOpenSettingsURLString)?.let { url ->
-            UIApplication.sharedApplication.openURL(url)
+            UIApplication.sharedApplication.openURL(
+                url,
+                options = emptyMap<Any?, Any?>(),
+                completionHandler = null,
+            )
         }
     }
 

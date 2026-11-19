@@ -35,6 +35,7 @@ internal class VoiceNoteState(
     private var waitingForGrant = false
     private var beganAtMs = 0L
     private var generation = 0L
+    private var capSendRequested = false
 
     fun tapMic() {
         if (recording || sending) return
@@ -55,9 +56,7 @@ internal class VoiceNoteState(
                 waitingForGrant = false
                 begin()
             }
-        } else {
-            // A prompt may return to the same Askable state after a denial. The caller also
-            // invokes this on resume so a later unrelated grant cannot start a stale request.
+        } else if (access == MicAccess.Blocked) {
             waitingForGrant = false
         }
     }
@@ -69,13 +68,17 @@ internal class VoiceNoteState(
         generation++
         beganAtMs = nowMs()
         elapsedMs = 0L
+        capSendRequested = false
         recording = true
     }
 
-    suspend fun tick() {
-        if (!recording) return
+    /** Reports the cap once so the caller can launch [send] outside its timer effect. */
+    fun tick(): Boolean {
+        if (!recording) return false
         elapsedMs = (nowMs() - beganAtMs).coerceAtLeast(0L)
-        if (elapsedMs >= VOICE_NOTE_MAX_DURATION_MS) send()
+        if (elapsedMs < VOICE_NOTE_MAX_DURATION_MS || capSendRequested) return false
+        capSendRequested = true
+        return true
     }
 
     suspend fun send() {
@@ -102,6 +105,7 @@ internal class VoiceNoteState(
         generation++
         if (recording || sending) recorder.cancel()
         recording = false
+        capSendRequested = false
         elapsedMs = 0L
     }
 }

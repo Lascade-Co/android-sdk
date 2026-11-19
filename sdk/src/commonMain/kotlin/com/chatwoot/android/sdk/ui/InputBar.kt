@@ -80,9 +80,10 @@ internal fun InputBar(
         voiceNoteRecorder?.interruptions?.collect { voiceState?.discard() }
     }
     LaunchedEffect(voiceState, voiceState?.recording) {
-        while (voiceState?.recording == true) {
+        val state = voiceState ?: return@LaunchedEffect
+        while (state.recording) {
             delay(200)
-            voiceState.tick()
+            if (state.tick()) scope.launch { state.send() }
         }
     }
     DisposableEffect(lifecycleOwner, voiceState) {

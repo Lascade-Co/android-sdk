@@ -8,9 +8,13 @@ import com.chatwoot.android.sdk.voice.VoiceNoteClip
 import com.chatwoot.android.sdk.voice.VoiceNoteRecorder
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -41,15 +45,27 @@ class VoiceNoteStateTest {
     }
 
     @Test
-    fun sameAskableStateAfterPromptClearsAutoStart() {
+    fun blockedResultAfterPromptClearsAutoStart() {
+        val recorder = FakeRecorder(MicAccess.Askable)
+        val state = VoiceNoteState(recorder, {}) { 0L }
+        state.tapMic()
+        state.onAccessChanged(MicAccess.Blocked)
+        recorder.access = MicAccess.Granted
+        state.onAccessChanged(recorder.access)
+        assertFalse(state.recording)
+        assertEquals(0, recorder.starts)
+    }
+
+    @Test
+    fun askableRefreshBeforeGrantStillStartsRecording() {
         val recorder = FakeRecorder(MicAccess.Askable)
         val state = VoiceNoteState(recorder, {}) { 0L }
         state.tapMic()
         state.onAccessChanged(MicAccess.Askable)
         recorder.access = MicAccess.Granted
         state.onAccessChanged(recorder.access)
-        assertFalse(state.recording)
-        assertEquals(0, recorder.starts)
+        assertTrue(state.recording)
+        assertEquals(1, recorder.starts)
     }
 
     @Test
@@ -84,16 +100,48 @@ class VoiceNoteStateTest {
         val state = VoiceNoteState(recorder, clips::add) { now }
         state.tapMic()
         now = VOICE_NOTE_MAX_DURATION_MS - 1
-        state.tick()
+        assertFalse(state.tick())
         assertTrue(state.recording)
         now++
-        state.tick()
+        assertTrue(state.tick())
+        assertFalse(state.tick())
+        state.send()
         assertFalse(state.recording)
         assertEquals(1, recorder.stops)
         assertEquals(1, clips.size)
-        state.tick()
+        assertFalse(state.tick())
         state.send()
         assertEquals(1, recorder.stops)
+    }
+
+    @Test
+    fun timerCancellationDoesNotCancelCapSend() = runTest {
+        val recorder = FakeRecorder(MicAccess.Granted)
+        val gate = CompletableDeferred<Unit>()
+        recorder.stopGate = gate
+        val clips = mutableListOf<VoiceNoteClip>()
+        var now = 0L
+        val state = VoiceNoteState(recorder, clips::add) { now }
+        state.tapMic()
+        now = VOICE_NOTE_MAX_DURATION_MS
+
+        val sendScope = this
+        var sendJob: Job? = null
+        val timerJob = launch(start = CoroutineStart.UNDISPATCHED) {
+            if (state.tick()) {
+                sendJob = sendScope.launch(start = CoroutineStart.UNDISPATCHED) { state.send() }
+            }
+            awaitCancellation()
+        }
+        assertFalse(state.recording)
+        assertTrue(state.sending)
+        timerJob.cancelAndJoin()
+        gate.complete(Unit)
+        requireNotNull(sendJob).join()
+
+        assertEquals(1, recorder.stops)
+        assertEquals(0, recorder.cancels)
+        assertEquals(1, clips.size)
     }
 
     @Test

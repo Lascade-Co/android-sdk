@@ -195,7 +195,9 @@ private class AndroidVoiceNoteRecorder(private val context: Context) : VoiceNote
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true
         val callback = object : AudioManager.AudioRecordingCallback() {
             override fun onRecordingConfigChanged(configs: MutableList<AudioRecordingConfiguration>) {
-                if (mediaRecorder != null && configs.any { it.isClientSilenced }) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                    mediaRecorder?.activeRecordingConfiguration?.isClientSilenced == true
+                ) {
                     interruptionEvents.tryEmit(Unit)
                 }
             }
