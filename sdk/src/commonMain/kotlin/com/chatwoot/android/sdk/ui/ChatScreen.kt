@@ -31,6 +31,7 @@ import coil3.compose.setSingletonImageLoaderFactory
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import com.chatwoot.android.sdk.ChatViewModel
 import com.chatwoot.android.sdk.style.StyleConfig
+import com.chatwoot.android.sdk.voice.VoiceNoteRecorder
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -38,6 +39,7 @@ internal fun ChatScreen(
     onFinish: () -> Unit,
     style: StyleConfig,
     modifier: Modifier = Modifier,
+    voiceNoteRecorder: VoiceNoteRecorder? = null,
     viewModel: ChatViewModel = viewModel { ChatViewModel() },
 ) {
     setSingletonImageLoaderFactory { context ->
@@ -119,6 +121,7 @@ internal fun ChatScreen(
             enabled = !state.loading,
             onSend = viewModel::send,
             onPickAttachment = viewModel::sendAttachment,
+            voiceNoteRecorder = voiceNoteRecorder,
         )
     }
 }

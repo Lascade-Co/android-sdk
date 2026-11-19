@@ -46,6 +46,12 @@ import androidx.compose.ui.unit.dp
  *   pill. Null = a default "+" glyph.
  * @property sendIcon Optional override for the glyph inside the circular send button. Null = a
  *   built-in up-arrow drawn on a canvas.
+ * @property micIcon Optional override for the voice-note button glyph. Null = built-in bars.
+ * @property voiceNoteRecordLabel Accessibility label for the voice-note button.
+ * @property voiceNoteCancelLabel Accessibility label for discarding a voice note.
+ * @property voiceNoteSendLabel Accessibility label for sending a voice note.
+ * @property micAccessOffMessage Inline guidance when microphone access is blocked.
+ * @property openSettingsLabel Label for the action opening app settings.
  * @property insetsHandledByHost Set true when the host's View layer already applies the system-bar
  *   and keyboard insets — e.g. an Activity using `adjustResize` with a `fitsSystemWindows` root. The
  *   SDK then consumes no window insets of its own (neither the IME on the input bar nor the status
@@ -85,6 +91,12 @@ public data class StyleConfig(
     val title: String = "Chat with us",
     val timeFormatter: ((epochSeconds: Long) -> String)? = null,
     val dateSeparatorFormatter: ((epochSeconds: Long) -> String)? = null,
+    val micIcon: (@Composable () -> Unit)? = null,
+    val voiceNoteRecordLabel: String = "Record voice note",
+    val voiceNoteCancelLabel: String = "Cancel recording",
+    val voiceNoteSendLabel: String = "Send voice note",
+    val micAccessOffMessage: String = "Microphone access is off. Turn it on in Settings to send voice notes.",
+    val openSettingsLabel: String = "Open Settings",
 )
 
 /** The stock Chatwoot look. */

@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import com.chatwoot.android.sdk.style.DefaultStyle
 import com.chatwoot.android.sdk.style.StyleConfig
 import com.chatwoot.android.sdk.ui.ChatScreen
+import com.chatwoot.android.sdk.voice.VoiceNoteRecorder
 
 /**
  * The Chatwoot chat screen — plain, embeddable content.
@@ -24,6 +25,7 @@ import com.chatwoot.android.sdk.ui.ChatScreen
  * @param styleConfig Visual customisation; defaults to the stock Chatwoot look.
  * @param modifier Sizes/positions the chat within the host container. Defaults to filling the
  *   parent; pass e.g. `Modifier.fillMaxWidth().fillMaxHeight(0.9f)` for a bottom sheet.
+ * @param voiceNoteRecorder Optional voice-note provider. Null leaves the message input unchanged.
  */
 @Composable
 public fun ChatPage(
@@ -31,7 +33,8 @@ public fun ChatPage(
     onFinish: () -> Unit,
     styleConfig: StyleConfig = DefaultStyle,
     modifier: Modifier = Modifier.fillMaxSize(),
+    voiceNoteRecorder: VoiceNoteRecorder? = null,
 ) {
     if (!show) return
-    ChatScreen(onFinish = onFinish, style = styleConfig, modifier = modifier)
+    ChatScreen(onFinish = onFinish, style = styleConfig, modifier = modifier, voiceNoteRecorder = voiceNoteRecorder)
 }

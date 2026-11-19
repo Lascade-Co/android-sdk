@@ -31,6 +31,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -107,7 +109,12 @@ internal fun TypingIndicator(style: StyleConfig, label: String = "typing") {
  * canvas-drawn up-arrow (no icon/resource dependency). Dims while [enabled] is false.
  */
 @Composable
-internal fun SendButton(enabled: Boolean, style: StyleConfig, onClick: () -> Unit) {
+internal fun SendButton(
+    enabled: Boolean,
+    style: StyleConfig,
+    contentDescription: String? = null,
+    onClick: () -> Unit,
+) {
     val bg = if (enabled) style.accentColor else style.accentColor.copy(alpha = 0.45f)
     Box(
         modifier = Modifier
@@ -115,6 +122,7 @@ internal fun SendButton(enabled: Boolean, style: StyleConfig, onClick: () -> Uni
             .clip(CircleShape)
             .background(bg)
             .clickable(enabled = enabled, onClick = onClick)
+            .then(if (contentDescription != null) Modifier.semantics { this.contentDescription = contentDescription } else Modifier)
             .alpha(if (enabled) 1f else 0.6f),
         contentAlignment = Alignment.Center,
     ) {
@@ -131,6 +139,40 @@ internal fun SendButton(enabled: Boolean, style: StyleConfig, onClick: () -> Uni
                 drawLine(fg, Offset(w / 2f, h * 0.82f), top, strokeWidth = stroke, cap = StrokeCap.Round)
                 drawLine(fg, Offset(w * 0.27f, h * 0.45f), top, strokeWidth = stroke, cap = StrokeCap.Round)
                 drawLine(fg, Offset(w * 0.73f, h * 0.45f), top, strokeWidth = stroke, cap = StrokeCap.Round)
+            }
+        }
+    }
+}
+
+/** Voice-note action with the same shape as the send action. */
+@Composable
+internal fun VoiceButton(enabled: Boolean, style: StyleConfig, onClick: () -> Unit) {
+    val bg = if (enabled) style.accentColor else style.accentColor.copy(alpha = 0.45f)
+    Box(
+        modifier = Modifier
+            .size(50.dp)
+            .clip(CircleShape)
+            .background(bg)
+            .clickable(enabled = enabled, onClick = onClick)
+            .semantics { contentDescription = style.voiceNoteRecordLabel }
+            .alpha(if (enabled) 1f else 0.6f),
+        contentAlignment = Alignment.Center,
+    ) {
+        val custom = style.micIcon
+        if (custom != null) {
+            custom()
+        } else {
+            val fg = style.onAccentColor
+            Canvas(modifier = Modifier.size(20.dp)) {
+                val cx = size.width / 2f
+                val mid = size.height / 2f
+                val stroke = size.width * 0.13f
+                val gap = size.width * 0.27f
+                val shortHalf = size.height * 0.16f
+                val tallHalf = size.height * 0.36f
+                drawLine(fg, Offset(cx - gap, mid - shortHalf), Offset(cx - gap, mid + shortHalf), strokeWidth = stroke, cap = StrokeCap.Round)
+                drawLine(fg, Offset(cx, mid - tallHalf), Offset(cx, mid + tallHalf), strokeWidth = stroke, cap = StrokeCap.Round)
+                drawLine(fg, Offset(cx + gap, mid - shortHalf), Offset(cx + gap, mid + shortHalf), strokeWidth = stroke, cap = StrokeCap.Round)
             }
         }
     }
