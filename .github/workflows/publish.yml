@@ -15,20 +15,21 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
-      - name: Check for sdk version change
+      - name: Check for SDK version change
         id: changed
         run: |
-          version=$(grep -E '^version\s*=' sdk/build.gradle.kts | sed -E 's/.*"(.+)".*/\1/')
+          version=$(sed -nE 's/^chatwoot\.version=([^[:space:]]+).*$/\1/p' gradle.properties)
+          test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Only publish when the `version = "..."` line changed in this push — Maven Central
+          # Only publish when the shared version property changed in this push — Maven Central
           # rejects republishing the same GAV anyway.
-          if git diff HEAD~1 HEAD -- sdk/build.gradle.kts | grep -qE '^[+-]version\s*=\s*"'; then
+          if git diff "${{ github.event.before }}" HEAD -- gradle.properties | grep -qE '^\+chatwoot\.version='; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
           else
             echo "publish=false" >> "$GITHUB_OUTPUT"
@@ -57,7 +58,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build, test and publish to Maven Central
-        run: ./gradlew :sdk:build :sdk:publishToMavenCentral
+        run: ./gradlew build :sdk:publishToMavenCentral :sdk-voice:publishToMavenCentral
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
@@ -83,7 +84,7 @@ jobs:
         run: |
           gh release create "sdk-v$VERSION" \
             --title "sdk v$VERSION" \
-            --notes "Chatwoot SDK $VERSION — Maven: com.chatwoot.android:sdk:$VERSION" \
+            --notes "Chatwoot SDK $VERSION — Maven: com.lascade.chatwoot:sdk:$VERSION and com.lascade.chatwoot:sdk-voice:$VERSION" \
             sdk/build/XCFrameworks/release/ChatwootSDK.xcframework.zip
 
       - name: Point Package.swift at the new release

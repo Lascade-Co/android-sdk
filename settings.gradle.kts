@@ -20,4 +20,5 @@ plugins {
 
 rootProject.name = "android-sdk"
 include(":sdk")
+include(":sdk-voice")
 include(":sample-app")

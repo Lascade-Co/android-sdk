@@ -11,7 +11,7 @@ plugins {
     alias(libs.plugins.vanniktech.maven.publish)
 }
 
-version = "0.3.0"
+version = providers.gradleProperty("chatwoot.version").get()
 
 kotlin {
     explicitApi()
